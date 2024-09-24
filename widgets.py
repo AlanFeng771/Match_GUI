@@ -261,5 +261,15 @@ class NextPatientButton(QtWidgets.QPushButton):
     
     def next(self):
         self.next_clicked.emit()
+        
+class PreviousPatientButton(QtWidgets.QPushButton):
+    previous_clicked = QtCore.pyqtSignal()
+    def __init__(self, parent=None):
+        super(PreviousPatientButton, self).__init__(parent)
+        self.setText('Previous')
+        self.clicked.connect(self.previous)
+    
+    def previous(self):
+        self.previous_clicked.emit()
     
     

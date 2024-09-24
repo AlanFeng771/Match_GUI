@@ -109,7 +109,7 @@ class PatientManager:
         else:
             return self.current_patient_index + 1
     
-    def get_last_id(self):
+    def get_previous_id(self):
         if self.current_patient_index is None:
             return None
 

@@ -17,12 +17,14 @@ class Controller(QtWidgets.QWidget):
         self.load_image_direction_button = widgets.LoadImageDirectionButton()
         self.load_bbox_direction_button = widgets.LoadAnnotationsDirectionButton()
         self.next_patient_button = widgets.NextPatientButton()
+        self.previous_patient_button = widgets.PreviousPatientButton()
         # layout
         VBlayout = QtWidgets.QVBoxLayout(self)
         VBlayout.addWidget(self.player)
         VBlayout.addWidget(self.load_image_direction_button)
         VBlayout.addWidget(self.load_bbox_direction_button)
         VBlayout.addWidget(self.next_patient_button)
+        VBlayout.addWidget(self.previous_patient_button)
         
         # func
         self.load_image_button.load_image_clicked.connect(self.load_image)
@@ -30,6 +32,7 @@ class Controller(QtWidgets.QWidget):
         self.load_image_direction_button.load_image_direction_clicked.connect(self.load_images_from_direction)
         self.load_bbox_direction_button.load_annotation_direction_clicked.connect(self.load_bboxes_from_direction)
         self.next_patient_button.next_clicked.connect(self.next_patient)
+        self.previous_patient_button.previous_clicked.connect(self.previous_patient)
         
     def load_image(self, image_path):
         patient_id = image_path.split('/')[-1].split('.')[0]
@@ -67,6 +70,15 @@ class Controller(QtWidgets.QWidget):
             self.player.reset_rects()
             self.player.load_image(self.patient_manager.get_patient(next_patient_id))
             self.player.load_bbox(self.patient_manager.get_patient(next_patient_id))
+    
+    def previous_patient(self):
+        pre_patient_id = self.patient_manager.get_previous_id()
+        if pre_patient_id is None:
+            return
+        else:
+            self.player.reset_rects()
+            self.player.load_image(self.patient_manager.get_patient(pre_patient_id))
+            self.player.load_bbox(self.patient_manager.get_patient(pre_patient_id))
         
         
 if __name__ == '__main__':

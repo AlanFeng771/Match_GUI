@@ -2,6 +2,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 import numpy as np
 import cv2
 import json
+import Manager
 class PhotoViewer(QtWidgets.QGraphicsView):
     photoClicked = QtCore.pyqtSignal(QtCore.QPoint)
     def __init__(self, parent):
@@ -114,18 +115,16 @@ class PlayerView(QtWidgets.QWidget):
         pix = QtGui.QPixmap(image)
         return pix
     
-    def load_image(self, image_path):
-        self.images = np.load(image_path)
+    def load_image(self, patient:Manager.Patient):
+        self.images = patient.get_images()
         self.image_index = 0
         self.scrollBar.setMaximum(self.images.shape[2]-1)
         self.show_image()
     
-    def load_bbox(self, bbox_path):
-        with open(bbox_path, 'r') as json_file:
-            bboxes = json.load(json_file)['bboxes']
-        
+    def load_bbox(self, patient:Manager.Patient):
+        bboxes = patient.get_bboxes()
         for bbox in bboxes:
-            left_top, right_bottom = bbox # left_top = [y_min, x_min, z_min], right_bottom = [y_max, x_max, z_max]
+            left_top, right_bottom = bbox.get_annotation() # left_top = [y_min, x_min, z_min], right_bottom = [y_max, x_max, z_max]
             width = (right_bottom[1] - left_top[1])+1
             height = (right_bottom[0] - left_top[0])+1
             center_x = (left_top[1] + right_bottom[1]) / 2
@@ -205,7 +204,8 @@ class LoadImageButton(QtWidgets.QPushButton):
     
     def load_image(self):
         filename, filetype = QtWidgets.QFileDialog.getOpenFileName(self, "Open file", "./")
-        self.load_image_clicked.emit(filename)
+        if filename != '':
+            self.load_image_clicked.emit(filename)
 
 class LoadAnnotationButton(QtWidgets.QPushButton):
     load_annotation_clicked = QtCore.pyqtSignal(str)
@@ -216,6 +216,31 @@ class LoadAnnotationButton(QtWidgets.QPushButton):
     
     def load_annotation(self):
         filename, filetype = QtWidgets.QFileDialog.getOpenFileName(self, "Open file", "./")
-        self.load_annotation_clicked.emit(filename)
+        if filename != '':
+            self.load_annotation_clicked.emit(filename)
+
+class LoadImageDirectionButton(QtWidgets.QPushButton):
+    load_image_direction_clicked = QtCore.pyqtSignal(str)
+    def __init__(self, parent=None):
+        super(LoadImageDirectionButton, self).__init__(parent)
+        self.setText('Load image direction')
+        self.clicked.connect(self.load_image_direction)
+    
+    def load_image_direction(self):
+        direction_path = QtWidgets.QFileDialog.getExistingDirectory(self, "Open file", "./")
+        if direction_path != '':
+            self.load_image_direction_clicked.emit(direction_path)
+        
+class LoadAnnotationsDirectionButton(QtWidgets.QPushButton):
+    load_annotation_direction_clicked = QtCore.pyqtSignal(str)
+    def __init__(self, parent=None):
+        super(LoadAnnotationsDirectionButton, self).__init__(parent)
+        self.setText('Load annotation direction')
+        self.clicked.connect(self.load_annotation_direction)
+    
+    def load_annotation_direction(self):
+        direction_path = QtWidgets.QFileDialog.getExistingDirectory(self, "Open file", "./")
+        if direction_path != '':
+            self.load_annotation_direction_clicked.emit(direction_path)
     
     

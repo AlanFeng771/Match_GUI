@@ -46,14 +46,27 @@ class Patient:
 
 class PatientManager:
     def __init__(self):
+        self.current_patient_index = None
         self.patients = {}
     
-    def get_patient(self, patient_id:str):
+    def get_patient(self, patient_index:int):
+        patient_ids = list(self.patients.keys())
+        patient_id = patient_ids[patient_index]
         if patient_id in self.patients:
+            self.current_patient_index = patient_index
             return self.patients[patient_id]
         else:
             return None
-        
+    
+    def get_patient_from_id(self, patient_id:str):
+        patient_ids = list(self.patients.keys())
+        patient_index = patient_ids.index(patient_id)
+        if patient_id in self.patients:
+            self.current_patient_index = patient_index
+            return self.patients[patient_id]
+        else:
+            return None
+    
     def _add_patient(self, patient:Patient):
         self.patients[patient.image_id] = patient
         
@@ -63,7 +76,7 @@ class PatientManager:
             patient.set_image_path(image_path)
             self._add_patient(patient)
         else:
-            patient = self.get_patient(patient_id)
+            patient = self.get_patient_from_id(patient_id)
             patient.set_image_path(image_path)
         
     def add_bbox_from_file(self, patient_id:str, bbox_path:str):
@@ -72,7 +85,7 @@ class PatientManager:
             patient.set_bbox_path(bbox_path)
             self._add_patient(patient)
         else:
-            patient = self.get_patient(patient_id)
+            patient = self.get_patient_from_id(patient_id)
             patient.set_bbox_path(bbox_path)
         
     def add_images_from_direction(self, patient_ids:list, image_paths:list):
@@ -82,6 +95,28 @@ class PatientManager:
     def add_bboxes_from_direction(self, patient_ids:list, bbox_paths:list):
         for patient_id, bbox_path in zip(patient_ids, bbox_paths):
             self.add_bbox_from_file(patient_id, bbox_path)
+        
+    def get_current_id(self):
+        return self.current_patient_index
+    
+    def get_next_id(self):
+        patient_ids = list(self.patients.keys())
+        if self.current_patient_index is None:
+            return None
+        
+        if self.current_patient_index == len(patient_ids) - 1:
+            return len(patient_ids) - 1
+        else:
+            return self.current_patient_index + 1
+    
+    def get_last_id(self):
+        if self.current_patient_index is None:
+            return None
+
+        if self.current_patient_index == 0:
+            return 0
+        else:
+            return self.current_patient_index - 1
     
     
 

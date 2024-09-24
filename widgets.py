@@ -152,6 +152,15 @@ class PlayerView(QtWidgets.QWidget):
         self.show_image(image_index)
         self.show_bbox(image_index)
         
+    def reset_rects(self):
+        # init
+        for rect in self.rects:
+            self.viewer.remove_item(rect)
+
+        del self.rects
+        # init bbox annotation
+        self.rects = []
+        
     
 class CustomRectItem(QtWidgets.QGraphicsItem):
     def __init__(self, size:list[int, int], position:QtCore.QRectF, slices:list, border_color=QtCore.Qt.red, parent=None):
@@ -242,5 +251,15 @@ class LoadAnnotationsDirectionButton(QtWidgets.QPushButton):
         direction_path = QtWidgets.QFileDialog.getExistingDirectory(self, "Open file", "./")
         if direction_path != '':
             self.load_annotation_direction_clicked.emit(direction_path)
+
+class NextPatientButton(QtWidgets.QPushButton):
+    next_clicked = QtCore.pyqtSignal()
+    def __init__(self, parent=None):
+        super(NextPatientButton, self).__init__(parent)
+        self.setText('Next')
+        self.clicked.connect(self.next)
+    
+    def next(self):
+        self.next_clicked.emit()
     
     

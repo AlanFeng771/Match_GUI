@@ -1,13 +1,12 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
-
+import numpy as np
+import cv2
 class PhotoViewer(QtWidgets.QGraphicsView):
     photoClicked = QtCore.pyqtSignal(QtCore.QPoint)
-
     def __init__(self, parent):
         super(PhotoViewer, self).__init__(parent)
         self._zoom = 0
         self._empty = True
-        #self.scaleFactor = 1
         self._scene = QtWidgets.QGraphicsScene(self)
         self._photo = QtWidgets.QGraphicsPixmapItem()
         self._scene.addItem(self._photo)
@@ -35,13 +34,6 @@ class PhotoViewer(QtWidgets.QGraphicsView):
                              viewrect.height() / scenerect.height())
                 self.scale(factor, factor)
             self._zoom = 0
-
-    def add_item(self, item: QtWidgets.QGraphicsItem):
-        self._scene.addItem(item)
-    
-    def remove_item(self, item: QtWidgets.QGraphicsItem):
-        self._scene.removeItem(item)
-    
     
     def setPhoto(self, pixmap=None):
         if pixmap and not pixmap.isNull():
@@ -53,8 +45,7 @@ class PhotoViewer(QtWidgets.QGraphicsView):
             self._empty = True
             self.setDragMode(QtWidgets.QGraphicsView.NoDrag)
             self._photo.setPixmap(QtGui.QPixmap())
-
-
+            
     def wheelEvent(self, event):
         modifiers = event.modifiers()
         if self.hasPhoto():
@@ -62,21 +53,15 @@ class PhotoViewer(QtWidgets.QGraphicsView):
                 if event.angleDelta().y() > 0:
                     factor = 1.25
                     self._zoom += 1
-                    #self.scaleFactor += 1
                 else:
                     factor = 0.75
                     self._zoom -= 1
-                    # self.scaleFactor -= 1
-                    # self.fitInView()
                 if self._zoom > 0:
                     self.scale(factor, factor)
                 elif self._zoom == 0:
                     self.fitInView()
                 else:
                     self._zoom = 0
-
-    def keyPressEvent(self, event):
-        event.ignore()
 
     def toggleDragMode(self):
         if self.dragMode() == QtWidgets.QGraphicsView.ScrollHandDrag:
@@ -90,47 +75,58 @@ class PhotoViewer(QtWidgets.QGraphicsView):
         super(PhotoViewer, self).mousePressEvent(event)
 
 
-class Window(QtWidgets.QWidget):
+class PlayerView(QtWidgets.QWidget):
     def __init__(self):
-        super(Window, self).__init__()
+        super(PlayerView, self).__init__()
+        self.initWidget()
+
+    def initWidget(self):
+        # PhotoViewer
         self.viewer = PhotoViewer(self)
-        # 'Load image' button
-        self.btnLoad = QtWidgets.QToolButton(self)
-        self.btnLoad.setText('Load image')
-        self.btnLoad.clicked.connect(self.loadImage)
-        # Button to change from drag/pan to getting pixel info
-        self.btnPixInfo = QtWidgets.QToolButton(self)
-        self.btnPixInfo.setText('Enter pixel info mode')
-        self.btnPixInfo.clicked.connect(self.pixInfo)
-        self.editPixInfo = QtWidgets.QLineEdit(self)
-        self.editPixInfo.setReadOnly(True)
-        self.viewer.photoClicked.connect(self.photoClicked)
-        # Arrange layout
+
+        # Scroll bar
+        self.scrollBar = QtWidgets.QScrollBar(QtCore.Qt.Horizontal)
+        self.scrollBar.setMinimum(0)
+        self.scrollBar.setMaximum(0)  # 初始設置為0，因為還沒有圖片加載
+        self.scrollBar.valueChanged.connect(self.show_image)
+
+        # layout
         VBlayout = QtWidgets.QVBoxLayout(self)
-        VBlayout.addWidget(self.viewer)
         HBlayout = QtWidgets.QHBoxLayout()
-        HBlayout.setAlignment(QtCore.Qt.AlignLeft)
-        HBlayout.addWidget(self.btnLoad)
-        HBlayout.addWidget(self.btnPixInfo)
-        HBlayout.addWidget(self.editPixInfo)
+        HBlayout.addWidget(self.scrollBar, 10)
+        VBlayout.addWidget(self.viewer)
         VBlayout.addLayout(HBlayout)
-
-    def loadImage(self):
-        self.viewer.setPhoto(QtGui.QPixmap('gt.png'))
-
-    def pixInfo(self):
-        self.viewer.toggleDragMode()
-
-    def photoClicked(self, pos):
-        if self.viewer.dragMode()  == QtWidgets.QGraphicsView.NoDrag:
-            self.editPixInfo.setText('%d, %d' % (pos.x(), pos.y()))
-
-
-if __name__ == '__main__':
-
-    import sys
-    app = QtWidgets.QApplication(sys.argv)
-    window = Window()
-    window.setGeometry(500, 300, 800, 600)
-    window.show()
-    sys.exit(app.exec_())
+        self.viewer.installEventFilter(self)
+    
+    def _numpytoPixmap(self, image):
+        image =  cv2.cvtColor(image.astype(np.uint8), cv2.COLOR_GRAY2RGB)
+        h,w,ch = image.shape
+        image = QtGui.QImage(image, w, h, w*ch, QtGui.QImage.Format_RGB888)
+        pix = QtGui.QPixmap(image)
+        return pix
+    
+    def load_image(self, image_path):
+        self.images = np.load(image_path)
+        self.image_index = 0
+        self.scrollBar.setMaximum(self.images.shape[2]-1)
+        self.show_image()
+    
+    def show_image(self, image_index=0):
+        # init
+        if self.images is not None:  
+            self.viewer.setPhoto(self._numpytoPixmap(self.images[:,:,image_index]))
+            self.viewer.fitInView()
+        self.image_index = image_index
+        
+class LoadImageButton(QtWidgets.QPushButton):
+    load_image_clicked = QtCore.pyqtSignal(str)
+    def __init__(self, parent=None):
+        super(LoadImageButton, self).__init__(parent)
+        self.setText('Load image')
+        self.clicked.connect(self.load_image)
+    
+    def load_image(self):
+        filename, filetype = QtWidgets.QFileDialog.getOpenFileName(self, "Open file", "./")
+        self.load_image_clicked.emit(filename)
+    
+    

@@ -196,7 +196,6 @@ class CustomRectItem(QtWidgets.QGraphicsItem):
         else:
             return False
         
-
 class LoadImageButton(QtWidgets.QPushButton):
     load_image_clicked = QtCore.pyqtSignal(str)
     def __init__(self, parent=None):

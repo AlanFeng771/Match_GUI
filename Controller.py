@@ -12,13 +12,14 @@ class Controller(QtWidgets.QWidget):
     def initWidget(self):
         self.player = widgets.PlayerView()
         self.load_image_button = widgets.LoadImageButton()
+        self.load_bbox_button = widgets.LoadAnnotationButton()
         VBlayout = QtWidgets.QVBoxLayout(self)
         VBlayout.addWidget(self.player)
         VBlayout.addWidget(self.load_image_button)
+        VBlayout.addWidget(self.load_bbox_button)
         self.load_image_button.load_image_clicked.connect(self.player.load_image)
+        self.load_bbox_button.load_annotation_clicked.connect(self.player.load_bbox)
         
-        
-
 if __name__ == '__main__':
     import sys
     app = QtWidgets.QApplication(sys.argv)

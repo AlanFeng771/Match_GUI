@@ -1,7 +1,10 @@
 from json import load
 from tkinter import N
+from turtle import right
 from PyQt5.QtCore import Qt
 from PyQt5 import QtWidgets
+from PyQt5.QtGui import QKeySequence
+from numpy import short
 import widgets
 import Manager
 import os
@@ -57,6 +60,18 @@ class Controller(QtWidgets.QWidget):
         VBlayout.addWidget(self.previous_nodule_button)
         VBlayout.addWidget(self.next_bbox_button)
         VBlayout.addWidget(self.previous_bbox_button)
+        
+        # shortcuts
+        a_shortcut = QtWidgets.QShortcut(QKeySequence('a'), self)
+        d_shortcut = QtWidgets.QShortcut(QKeySequence('d'), self)
+        left_shortcut = QtWidgets.QShortcut(QKeySequence(Qt.Key_Left), self)
+        right_shortcut = QtWidgets.QShortcut(QKeySequence(Qt.Key_Right), self)
+        
+        a_shortcut.activated.connect(self.previous_nodule)
+        d_shortcut.activated.connect(self.next_nodule)
+        left_shortcut.activated.connect(self.previous_bbox)
+        right_shortcut.activated.connect(self.next_bbox)
+        
         
         # func
         self.load_image_button.load_image_clicked.connect(self.load_image)
@@ -206,7 +221,7 @@ class Controller(QtWidgets.QWidget):
         if self.bbox_button_list.set_bbox_button_index(self.bbox_index-1):
             self.bbox_index -= 1
         self.jump_to_nodule_bbox_start_slice(self.bbox_index)   
-        
+    
 if __name__ == '__main__':
     import sys
     app = QtWidgets.QApplication(sys.argv)

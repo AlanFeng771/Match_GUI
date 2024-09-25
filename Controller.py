@@ -1,4 +1,5 @@
 from json import load
+from tkinter import N
 from PyQt5.QtCore import Qt
 from PyQt5 import QtWidgets
 import widgets
@@ -10,7 +11,7 @@ class Controller(QtWidgets.QWidget):
         self.patient_manager = Manager.PatientManager()
         self.Cls_manager = Manager.ClsManager()
         self.patient_ids = []
-        self.patient_index = 0
+        # self.patient_index = 0
         self.Cls_manager.load_csv_file(r'E:\workspace\python\Tools\check_nodule_classification\lung_M_class_0001-1800.csv')
         self.patient_ids = []
         self.initWidget()
@@ -28,6 +29,7 @@ class Controller(QtWidgets.QWidget):
         self.Cls_button_list = widgets.ButtonListWindow() 
         self.bbox_button_list = widgets.BboxesButtonListView()
         self.patient_index_controller = widgets.PatientControlWidget()
+        self.next_node_button = widgets.NextNoduleButton()
           
         # layout
         VBlayout = QtWidgets.QVBoxLayout(self)
@@ -47,6 +49,7 @@ class Controller(QtWidgets.QWidget):
         VBlayout1.addWidget(QtWidgets.QWidget())
         HBlayout.addLayout(VBlayout1)
         VBlayout.addLayout(HBlayout)
+        VBlayout.addWidget(self.next_node_button)
         
         # func
         self.load_image_button.load_image_clicked.connect(self.load_image)
@@ -58,6 +61,7 @@ class Controller(QtWidgets.QWidget):
         self.patient_index_controller.next_clicked.connect(self.next_patient)
         self.patient_index_controller.previous_clicked.connect(self.previous_patient)
         self.patient_index_controller.patient_index_changed.connect(self.patient_index_changed)
+        # self.next_node_button.next_node_clicked.connect(self.next_nodule)
         
     def load_image(self, image_path):
         self.patient_ids = [image_path.split('/')[-1].split('.')[0]]
@@ -79,12 +83,14 @@ class Controller(QtWidgets.QWidget):
         image_paths = [f'{direction_path}/{patient_id}.npy' for patient_id in self.patient_ids]
         self.patient_manager.add_images_from_direction(self.patient_ids, image_paths)
         
-        self.player.load_image(self.patient_manager.get_patient(self.patient_index))
-        self.player_with_bbox.load_image(self.patient_manager.get_patient(self.patient_index))
+        patient_index = self.patient_manager.get_current_index()
+        if patient_index is None:
+            return
+        self.player.load_image(self.patient_manager.get_patient(patient_index))
+        self.player_with_bbox.load_image(self.patient_manager.get_patient(patient_index))
         self.player.show(0)
         self.player_with_bbox.show(0)
         self.Cls_button_list.clear_buttons()
-        # self.Cls_button_list.add_buttions(self.Cls_manager.get_patient(self.patient_ids[0]))
         
         self.patient_index_controller.clear()
         self.patient_index_controller.addPatients(self.patient_ids)
@@ -97,50 +103,67 @@ class Controller(QtWidgets.QWidget):
         bbox_paths = [f'{direction_path}/{patient_id}.json' for patient_id in self.patient_ids]
         self.patient_manager.add_bboxes_from_direction(self.patient_ids, bbox_paths)
         
+        patient_index = self.patient_manager.get_current_index()
+        if patient_index is None:
+            return
         # self.player_with_bbox.load_bbox(self.patient_manager.get_patient(self.patient_index))
         self.player_with_bbox.show(0)
         
         self.bbox_button_list.clear_buttons()
-        self.bbox_button_list.add_bboxes(self.patient_manager.get_patient(self.patient_index), self.Cls_manager.get_patient(self.patient_ids[self.patient_index]))
+        self.bbox_button_list.add_bboxes(self.patient_manager.get_patient(patient_index), self.Cls_manager.get_patient(self.patient_ids[patient_index]))
         
     def next_patient(self):
-        next_patient_index = self.patient_manager.get_next_index()
-        if next_patient_index is None:
+        self.patient_manager.next_index()
+        patient_index = self.patient_manager.get_current_index()
+        if patient_index is None:
             return
         else:
-            self.patient_index = next_patient_index
-            self.patient_index_controller.setPatientIndex(self.patient_index)            
+            self.patient_index_controller.setPatientIndex(patient_index)            
     
     def previous_patient(self):
-        previous_patient_index = self.patient_manager.get_previous_index()
-        if previous_patient_index is None:
+        self.patient_manager.previous_index()
+        patient_index = self.patient_manager.get_current_index()
+        if patient_index is None:
             return
         else:
-            self.patient_index = previous_patient_index
-            self.patient_index_controller.setPatientIndex(self.patient_index)
+            self.patient_index_controller.setPatientIndex(patient_index)
     
-    def patient_index_changed(self, patient_index:int):
-        self.patient_index = patient_index
+    def patient_index_changed(self, index:int):
+        self.patient_manager.set_patient_index(index)
+
+        patient_index = self.patient_manager.get_current_index()
+        if patient_index is None:
+            return
+        
         self.Cls_button_list.clear_buttons()
-        self.Cls_button_list.add_buttions(self.Cls_manager.get_patient(self.patient_ids[self.patient_index]))
+        self.Cls_button_list.add_buttions(self.Cls_manager.get_patient(self.patient_ids[patient_index]))
         
         self.bbox_button_list.clear_buttons()
-        self.bbox_button_list.add_bboxes(self.patient_manager.get_patient(self.patient_index), self.Cls_manager.get_patient(self.patient_ids[self.patient_index]))
+        self.bbox_button_list.add_bboxes(self.patient_manager.get_patient(patient_index), self.Cls_manager.get_patient(self.patient_ids[patient_index]))
         
         self.player_with_bbox.reset_rects()
-        self.player.load_image(self.patient_manager.get_patient(self.patient_index))
-        self.player_with_bbox.load_image(self.patient_manager.get_patient(self.patient_index))
-        self.player_with_bbox.load_bbox(self.patient_manager.get_patient(self.patient_index))
+        self.player.load_image(self.patient_manager.get_patient(patient_index))
+        self.player_with_bbox.load_image(self.patient_manager.get_patient(patient_index))
+        self.player_with_bbox.load_bbox(self.patient_manager.get_patient(patient_index))
         self.player.show(0)
         self.player_with_bbox.show(0)
     
     def jump_to_nodule_start_slice(self, nodule_index:int):
-        image_index = self.Cls_manager.get_patient(self.patient_ids[self.patient_index]).get_elements()[nodule_index].get_start_slice()
+        patient_index = self.patient_manager.get_current_index()
+        if patient_index is None:
+            return
+        image_index = self.Cls_manager.get_patient(self.patient_ids[patient_index]).get_elements()[nodule_index].get_start_slice()
         self.player.show(image_index)
     
     def jump_to_nodule_bbox_start_slice(self, nodule_index:int):
-        image_index = self.patient_manager.get_patient(self.patient_index).get_start_slices()[nodule_index]
+        patient_index = self.patient_manager.get_current_index()
+        if patient_index is None:
+            return
+        image_index = self.patient_manager.get_patient(patient_index).get_start_slices()[nodule_index]
         self.player_with_bbox.show_and_focus_bbox(index=nodule_index, image_index=image_index)
+    
+    # def next_nodule(self):
+    #     self.Cls_button_list.
         
 if __name__ == '__main__':
     import sys

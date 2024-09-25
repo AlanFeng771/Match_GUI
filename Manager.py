@@ -74,10 +74,10 @@ class PatientManager:
             return None
     
     def get_patient_from_id(self, patient_id:str)->Patient:
-        patient_ids = list(self.patients.keys())
-        patient_index = patient_ids.index(patient_id)
+        # patient_ids = list(self.patients.keys())
+        # patient_index = patient_ids.index(patient_id)
         if patient_id in self.patients:
-            self.current_patient_index = patient_index
+            # self.current_patient_index = patient_index
             return self.patients[patient_id]
         else:
             return None
@@ -105,6 +105,9 @@ class PatientManager:
             patient.set_bbox_path(bbox_path)
         
     def add_images_from_direction(self, patient_ids:list, image_paths:list):
+        if len(patient_ids)>0:
+            self.current_patient_index = 0
+            
         for patient_id, image_path in zip(patient_ids, image_paths):
             self.add_image_from_file(patient_id, image_path)
     
@@ -112,27 +115,34 @@ class PatientManager:
         for patient_id, bbox_path in zip(patient_ids, bbox_paths):
             self.add_bbox_from_file(patient_id, bbox_path)
         
-    def get_current_id(self):
+    def get_current_index(self):
         return self.current_patient_index
     
-    def get_next_index(self):
+    def next_index(self):
         patient_ids = list(self.patients.keys())
         if self.current_patient_index is None:
             return None
         
         if self.current_patient_index == len(patient_ids) - 1:
-            return len(patient_ids) - 1
+            self.current_patient_index = len(patient_ids) - 1
         else:
-            return self.current_patient_index + 1
+            self.current_patient_index += 1
     
-    def get_previous_index(self):
+    def previous_index(self):
         if self.current_patient_index is None:
             return None
 
         if self.current_patient_index == 0:
-            return 0
+            self.current_patient_index = 0
         else:
-            return self.current_patient_index - 1
+            self.current_patient_index -= 1
+    
+    def set_patient_index(self, patient_index:int):
+        patient_ids = list(self.patients.keys())
+        if patient_index < 0 or patient_index >= len(patient_ids):
+            return
+        
+        self.current_patient_index = patient_index
 
 class ClsElement:
     def __init__(self, start_slice:int, category:int):

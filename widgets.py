@@ -351,6 +351,7 @@ class ButtonListWindow(QtWidgets.QWidget):
         super().__init__()
         self.setFixedSize(QtCore.QSize(250, 400))
         self.Cls_buttons = []
+        self.current_cls_button_index = 0
         self.initWidget()
 
     def initWidget(self):
@@ -406,6 +407,11 @@ class ButtonListWindow(QtWidgets.QWidget):
         self.reset_buttons()
         self.Cls_buttons[index].set_checked(True)
         self.Cls_button_clicked.emit(index)
+    
+    def set_cls_button_index(self, index:int):
+        if index >= 0 and index < len(self.Cls_buttons):
+            self.current_cls_button_index = index
+        self.Cls_buttons[self.current_cls_button_index].set_checked(True)
 
 class BboxButton(QtWidgets.QPushButton):
     bbox_button_clicked = QtCore.pyqtSignal(int)
@@ -517,6 +523,14 @@ class BboxesButtonListView(QtWidgets.QWidget):
         self.reset_buttons()
         self.bbox_buttons[index].set_checked(True)
         self.bbox_button_clicked.emit(index)
+    
+
+class NextNoduleButton(QtWidgets.QPushButton):
+    next_nodule_clicked = QtCore.pyqtSignal()
+    def __init__(self, parent=None):
+        super(NextNoduleButton, self).__init__(parent)
+        self.setText('Next Nodule')
+        self.clicked.connect(self.next_nodule_clicked.emit)
 
     
     

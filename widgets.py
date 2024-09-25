@@ -568,3 +568,10 @@ class NextBboxButton(QtWidgets.QPushButton):
         super(NextBboxButton, self).__init__(parent)
         self.setText('Next Bbox')
         self.clicked.connect(self.next_bbox_clicked.emit)
+
+class PreviousBboxButton(QtWidgets.QPushButton):    
+    previous_bbox_clicked = QtCore.pyqtSignal()
+    def __init__(self, parent=None):
+        super(PreviousBboxButton, self).__init__(parent)
+        self.setText('Previous Bbox')
+        self.clicked.connect(self.previous_bbox_clicked.emit)

@@ -33,6 +33,7 @@ class Controller(QtWidgets.QWidget):
         self.next_nodule_button = widgets.NextNoduleButton()
         self.previous_nodule_button = widgets.PreviousNoduleButton()
         self.next_bbox_button = widgets.NextBboxButton()
+        self.previous_bbox_button = widgets.PreviousBboxButton()
           
         # layout
         VBlayout = QtWidgets.QVBoxLayout(self)
@@ -55,6 +56,7 @@ class Controller(QtWidgets.QWidget):
         VBlayout.addWidget(self.next_nodule_button)
         VBlayout.addWidget(self.previous_nodule_button)
         VBlayout.addWidget(self.next_bbox_button)
+        VBlayout.addWidget(self.previous_bbox_button)
         
         # func
         self.load_image_button.load_image_clicked.connect(self.load_image)
@@ -69,6 +71,7 @@ class Controller(QtWidgets.QWidget):
         self.next_nodule_button.next_nodule_clicked.connect(self.next_nodule)
         self.previous_nodule_button.previous_nodule_clicked.connect(self.previous_nodule)
         self.next_bbox_button.next_bbox_clicked.connect(self.next_bbox)
+        self.previous_bbox_button.previous_bbox_clicked.connect(self.previous_bbox)
         
     def load_image(self, image_path):
         self.patient_ids = [image_path.split('/')[-1].split('.')[0]]
@@ -198,6 +201,11 @@ class Controller(QtWidgets.QWidget):
         if self.bbox_button_list.set_bbox_button_index(self.bbox_index+1):
             self.bbox_index += 1
         self.jump_to_nodule_bbox_start_slice(self.bbox_index)
+    
+    def previous_bbox(self):
+        if self.bbox_button_list.set_bbox_button_index(self.bbox_index-1):
+            self.bbox_index -= 1
+        self.jump_to_nodule_bbox_start_slice(self.bbox_index)   
         
 if __name__ == '__main__':
     import sys

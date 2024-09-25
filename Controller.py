@@ -37,10 +37,10 @@ class Controller(QtWidgets.QWidget):
         load_HBlayout = QtWidgets.QHBoxLayout()
         HBlayout.addWidget(self.player, 4)
         HBlayout.addWidget(self.player_with_bbox, 4)
-        VBlayout1.addWidget(self.patient_index_controller)
         load_HBlayout.addWidget(self.load_image_direction_button)
         load_HBlayout.addWidget(self.load_bbox_direction_button)
         VBlayout1.addLayout(load_HBlayout)
+        VBlayout1.addWidget(self.patient_index_controller)
         list_HBlayout.addWidget(self.Cls_button_list)
         list_HBlayout.addWidget(self.bbox_button_list)
         VBlayout1.addLayout(list_HBlayout)
@@ -91,7 +91,6 @@ class Controller(QtWidgets.QWidget):
         self.load_bbox_direction_button.setEnabled(True)
         
     def load_bboxes_from_direction(self, direction_path):
-        # patient_ids = [path.split('/')[-1].split('.')[0] for path in os.listdir(direction_path)]
         if len(self.patient_ids) == 0:
             return
 
@@ -102,7 +101,7 @@ class Controller(QtWidgets.QWidget):
         self.player_with_bbox.show(0)
         
         self.bbox_button_list.clear_buttons()
-        self.bbox_button_list.add_buttions(self.patient_manager.get_patient(self.patient_index))
+        self.bbox_button_list.add_bboxes(self.patient_manager.get_patient(self.patient_index), self.Cls_manager.get_patient(self.patient_ids[self.patient_index]))
         
     def next_patient(self):
         next_patient_index = self.patient_manager.get_next_index()
@@ -126,7 +125,7 @@ class Controller(QtWidgets.QWidget):
         self.Cls_button_list.add_buttions(self.Cls_manager.get_patient(self.patient_ids[self.patient_index]))
         
         self.bbox_button_list.clear_buttons()
-        self.bbox_button_list.add_buttions(self.patient_manager.get_patient(self.patient_index))
+        self.bbox_button_list.add_bboxes(self.patient_manager.get_patient(self.patient_index), self.Cls_manager.get_patient(self.patient_ids[self.patient_index]))
         
         self.player_with_bbox.reset_rects()
         self.player.load_image(self.patient_manager.get_patient(self.patient_index))

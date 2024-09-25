@@ -380,7 +380,7 @@ class ButtonListWindow(QtWidgets.QWidget):
     def add_buttions(self, patient:Manager.PatientClsElement):
         cls_elements = patient.get_elements()
         for index, cls_element in enumerate(cls_elements):
-            self.add_button('slice:{}, cls:{}'.format(cls_element.get_start_slice(), cls_element.get_category()), index)
+            self.add_button('Nodule {},slice:{}, cls:{}'.format(index, cls_element.get_start_slice(), cls_element.get_category()), index)
     
     def clear_buttons(self):
         """清除當前所有按鈕"""
@@ -398,11 +398,41 @@ class BboxButton(QtWidgets.QPushButton):
         self.index = index
         self.clicked.connect(lambda: self.bbox_button_clicked.emit(self.index))
 
+class BboxNoduleBox(QtWidgets.QComboBox):
+    def __init__(self, nodule_count:int):
+        super(BboxNoduleBox, self).__init__()
+        self.setFixedSize(QtCore.QSize(80, 20))
+        self.setMaxVisibleItems(9999)
+        self.addNodules(nodule_count)
+
+    def addNodule(self, nodule_index:int):
+        self.addItem('nodule {}'.format(nodule_index))
+        self.update()
+    
+    def addNodules(self, nodule_count:int):
+        for nodule_index in range(nodule_count):
+            self.addNodule(nodule_index)
+    
+    def setPatientIndex(self, index:int):
+        self.setCurrentIndex(index)
+        
+class BboxItem(QtWidgets.QWidget):
+    bbox_button_clicked = QtCore.pyqtSignal(int)
+    def __init__(self, text:str, index:int, nodule_count:int, parent=None):
+        super(BboxItem, self).__init__(parent)
+        bbox = BboxButton(text, index, self)
+        nodule_box = BboxNoduleBox(nodule_count)
+        
+        bbox.clicked.connect(lambda: self.bbox_button_clicked.emit(index))
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.addWidget(bbox)
+        layout.addWidget(nodule_box)
+        
+
 class BboxesButtonListView(QtWidgets.QWidget):
     bbox_button_clicked = QtCore.pyqtSignal(int)
     def __init__(self):
         super().__init__()
-        print('create BboxesButtonListView')
         self.setFixedSize(QtCore.QSize(250, 400))
         self.bbox_buttons = []
         self.initWidget()
@@ -428,17 +458,17 @@ class BboxesButtonListView(QtWidgets.QWidget):
         layout.addWidget(scroll_area)
 
     
-    def add_button(self, text:str, index:int):
-        button = BboxButton(text, index, self)
+    def add_bbox(self, text:str, index:int, nodule_count:int):
+        button = BboxItem(text, index, nodule_count, self)
         button.bbox_button_clicked.connect(lambda: self.bbox_button_clicked.emit(index))
         self.bbox_buttons.append(button)
         self.button_layout.addRow(button)
     
-    def add_buttions(self, patient:Manager.Patient):
+    def add_bboxes(self, patient:Manager.Patient, patient_cls_element:Manager.PatientClsElement):
         bboxes = patient.get_bboxes()
+
         for index, bbox in enumerate(bboxes):
-            print('slice:{}'.format(bbox.get_start_slice()))
-            self.add_button('slice:{}'.format(bbox.get_start_slice()), index)
+            self.add_bbox('Bbox {}, slice:{}'.format(index, bbox.get_start_slice()), index, patient_cls_element.get_nodule_count())
     
     def clear_buttons(self):
         """清除當前所有按鈕"""
@@ -447,5 +477,6 @@ class BboxesButtonListView(QtWidgets.QWidget):
             widget = item.widget()
             if widget is not None:
                 widget.deleteLater()
+
     
     

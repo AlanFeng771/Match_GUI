@@ -50,6 +50,12 @@ class Patient:
     def get_bboxes(self):
         return self.bboxes
 
+    def get_bbox(self, bbox_index:int):
+        if self.is_bbox_index_valid(bbox_index):
+            return self.bboxes[bbox_index]
+        else:
+            return None
+
     def is_access_granted(self):
         if self.bbox_path is not None and self.image_path is not None:
             return True
@@ -58,10 +64,17 @@ class Patient:
     
     def get_start_slices(self)->list:
         return [bbox.get_start_slice() for bbox in self.bboxes]
+    
+    def is_bbox_index_valid(self, bbox_index:int):
+        if bbox_index < 0 or bbox_index >= len(self.bboxes):
+            return False
+        else:
+            return True
 
 class PatientManager:
     def __init__(self):
         self.current_patient_index = None
+        self.current_bbox_index = None
         self.patients = {}
     
     def get_patient(self, patient_index:int)->Patient:
@@ -143,6 +156,7 @@ class PatientManager:
             return
         
         self.current_patient_index = patient_index
+    
 
 class ClsElement:
     def __init__(self, start_slice:int, category:int):

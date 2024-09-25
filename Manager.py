@@ -9,6 +9,9 @@ class Bbox:
     def get_annotation(self):
         return self.bbox
     
+    def get_start_slice(self):
+        return self.bbox[0][2]
+    
     def set_category(self, category):
         self.category = category
 
@@ -44,6 +47,9 @@ class Patient:
             return True
         else:
             return False
+    
+    def get_start_slices(self)->list:
+        return [bbox.get_start_slice() for bbox in self.bboxes]
 
 class PatientManager:
     def __init__(self):
@@ -59,7 +65,7 @@ class PatientManager:
         else:
             return None
     
-    def get_patient_from_id(self, patient_id:str):
+    def get_patient_from_id(self, patient_id:str)->Patient:
         patient_ids = list(self.patients.keys())
         patient_index = patient_ids.index(patient_id)
         if patient_id in self.patients:
@@ -77,6 +83,7 @@ class PatientManager:
             patient.set_image_path(image_path)
             self._add_patient(patient)
         else:
+            
             patient = self.get_patient_from_id(patient_id)
             patient.set_image_path(image_path)
         

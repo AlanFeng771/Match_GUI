@@ -1,3 +1,4 @@
+import code
 from PyQt5 import QtWidgets
 import widgets
 import Manager
@@ -16,6 +17,7 @@ class Controller(QtWidgets.QWidget):
     def initWidget(self):
         # widgets
         self.player = widgets.PlayerView()
+        self.player_with_bbox = widgets.PlayerView()
         self.load_image_button = widgets.LoadImageButton()
         self.load_bbox_button = widgets.LoadAnnotationButton()
         self.load_image_direction_button = widgets.LoadImageDirectionButton()
@@ -23,12 +25,16 @@ class Controller(QtWidgets.QWidget):
         self.load_bbox_direction_button.setEnabled(False)
         self.next_patient_button = widgets.NextPatientButton()
         self.previous_patient_button = widgets.PreviousPatientButton()
-        self.Cls_button_list = widgets.ButtonListWindow()   
+        self.Cls_button_list = widgets.ButtonListWindow() 
+        self.bbox_button_list = widgets.BboxesButtonListView()
+          
         # layout
         VBlayout = QtWidgets.QVBoxLayout(self)
         HBlayout = QtWidgets.QHBoxLayout()
         HBlayout.addWidget(self.player)
+        HBlayout.addWidget(self.player_with_bbox)
         HBlayout.addWidget(self.Cls_button_list)
+        HBlayout.addWidget(self.bbox_button_list)
         VBlayout.addLayout(HBlayout)
         VBlayout.addWidget(self.load_image_direction_button)
         VBlayout.addWidget(self.load_bbox_direction_button)
@@ -43,6 +49,7 @@ class Controller(QtWidgets.QWidget):
         self.next_patient_button.next_clicked.connect(self.next_patient)
         self.previous_patient_button.previous_clicked.connect(self.previous_patient)
         self.Cls_button_list.Cls_button_clicked.connect(self.jump_to_nodule_start_slice)
+        self.bbox_button_list.bbox_button_clicked.connect(self.jump_to_nodule_bbox_start_slice)
         
     def load_image(self, image_path):
         self.patient_ids = [image_path.split('/')[-1].split('.')[0]]
@@ -54,6 +61,9 @@ class Controller(QtWidgets.QWidget):
         self.patient_manager.add_bbox_from_file(self.patient_ids[0], bbox_path)
         self.player.load_bbox(self.patient_manager.get_patient(0))
         
+        self.bbox_button_list.clear_buttons()
+        self.bbox_button_list.add_buttions(self.patient_manager.get_patient(0))
+        
     def load_images_from_direction(self, direction_path):
         self.patient_ids = [path.split('/')[-1].split('.')[0] for path in os.listdir(direction_path)]
         if len(self.patient_ids) == 0:
@@ -62,9 +72,12 @@ class Controller(QtWidgets.QWidget):
         image_paths = [f'{direction_path}/{patient_id}.npy' for patient_id in self.patient_ids]
         self.patient_manager.add_images_from_direction(self.patient_ids, image_paths)
         self.player.load_image(self.patient_manager.get_patient(0))
-        
+        self.player_with_bbox.load_image(self.patient_manager.get_patient(self.patient_index))
+        self.player.show(0)
+        self.player_with_bbox.show(0)
         self.Cls_button_list.clear_buttons()
         self.Cls_button_list.add_buttions(self.Cls_manager.get_patient(self.patient_ids[0]))
+        
         self.load_bbox_direction_button.setEnabled(True)
         
     def load_bboxes_from_direction(self, direction_path):
@@ -74,19 +87,34 @@ class Controller(QtWidgets.QWidget):
 
         bbox_paths = [f'{direction_path}/{patient_id}.json' for patient_id in self.patient_ids]
         self.patient_manager.add_bboxes_from_direction(self.patient_ids, bbox_paths)
-        self.player.load_bbox(self.patient_manager.get_patient(self.patient_index))
-    
+        
+        self.player_with_bbox.load_bbox(self.patient_manager.get_patient(self.patient_index))
+        self.player_with_bbox.show(0)
+        
+        self.bbox_button_list.clear_buttons()
+        self.bbox_button_list.add_buttions(self.patient_manager.get_patient(self.patient_index))
+        
     def next_patient(self):
         next_patient_index = self.patient_manager.get_next_index()
         if next_patient_index is None:
             return
         else:
             self.patient_index = next_patient_index
-            self.player.reset_rects()
+            
             self.Cls_button_list.clear_buttons()
             self.Cls_button_list.add_buttions(self.Cls_manager.get_patient(self.patient_ids[self.patient_index]))
+            
+            self.bbox_button_list.clear_buttons()
+            self.bbox_button_list.add_buttions(self.patient_manager.get_patient(next_patient_index))
+            
+            self.player_with_bbox.reset_rects()
             self.player.load_image(self.patient_manager.get_patient(next_patient_index))
-            self.player.load_bbox(self.patient_manager.get_patient(next_patient_index))
+            self.player_with_bbox.load_image(self.patient_manager.get_patient(next_patient_index))
+            self.player_with_bbox.load_bbox(self.patient_manager.get_patient(next_patient_index))
+            self.player.show(0)
+            self.player_with_bbox.show(0)
+            
+            
     
     def previous_patient(self):
         previous_patient_index = self.patient_manager.get_previous_index()
@@ -94,17 +122,27 @@ class Controller(QtWidgets.QWidget):
             return
         else:
             self.patient_index = previous_patient_index
-            self.player.reset_rects()
-            self.Cls_button_list.add_buttions(self.Cls_manager.get_patient(self.patient_ids[self.patient_index]))
+            
             self.Cls_button_list.clear_buttons()
             self.Cls_button_list.add_buttions(self.Cls_manager.get_patient(self.patient_ids[self.patient_index]))
+            
+            self.bbox_button_list.clear_buttons()
+            self.bbox_button_list.add_buttions(self.patient_manager.get_patient(previous_patient_index))
+            
+            self.player_with_bbox.reset_rects()
             self.player.load_image(self.patient_manager.get_patient(previous_patient_index))
-            self.player.load_bbox(self.patient_manager.get_patient(previous_patient_index))
+            self.player_with_bbox.load_image(self.patient_manager.get_patient(previous_patient_index))
+            self.player_with_bbox.load_bbox(self.patient_manager.get_patient(previous_patient_index))
+            self.player.show(0)
+            self.player_with_bbox.show(0)
     
     def jump_to_nodule_start_slice(self, nodule_index:int):
         image_index = self.Cls_manager.get_patient(self.patient_ids[self.patient_index]).get_elements()[nodule_index].get_start_slice()
         self.player.show(image_index)
-        
+    
+    def jump_to_nodule_bbox_start_slice(self, nodule_index:int):
+        image_index = self.patient_manager.get_patient(self.patient_index).get_start_slices()[nodule_index]
+        self.player_with_bbox.show_and_focus_bbox(index=nodule_index, image_index=image_index)
         
 if __name__ == '__main__':
     import sys

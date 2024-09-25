@@ -1,3 +1,4 @@
+import re
 from PyQt5 import QtCore, QtGui, QtWidgets 
 import numpy as np
 import cv2
@@ -148,9 +149,22 @@ class PlayerView(QtWidgets.QWidget):
                 else:
                     rect.hide()
     
-    def show(self, image_index=0):
+    def reset_bbox_color(self):
+        if len(self.rects) > 0:
+            for rect in self.rects:
+                rect.setBorderColor(QtCore.Qt.red)
+    
+    def show(self, image_index:int=0):
         self.show_image(image_index)
         self.show_bbox(image_index)
+    
+    def show_and_focus_bbox(self, index:int, image_index:int=0):
+        self.reset_bbox_color()
+        rect = self.rects[index]
+        rect.setBorderColor(QtCore.Qt.green)
+        
+        self.show(image_index)
+        
         
     def reset_rects(self):
         # init
@@ -196,6 +210,8 @@ class CustomRectItem(QtWidgets.QGraphicsItem):
     
     def getVisible(self):
         return self.is_visible
+    
+    
     
     def is_valid(self, slice):
         print(self.slices, slice)
@@ -327,6 +343,63 @@ class ButtonListWindow(QtWidgets.QWidget):
             widget = item.widget()
             if widget is not None:
                 widget.deleteLater()
+
+class BboxButton(QtWidgets.QPushButton):
+    bbox_button_clicked = QtCore.pyqtSignal(int)
+    def __init__(self, text:str, index:int, parent=None):
+        super(BboxButton, self).__init__(parent)
+        self.setText(text)
+        self.index = index
+        self.clicked.connect(lambda: self.bbox_button_clicked.emit(self.index))
+
+class BboxesButtonListView(QtWidgets.QWidget):
+    bbox_button_clicked = QtCore.pyqtSignal(int)
+    def __init__(self):
+        super().__init__()
+        print('create BboxesButtonListView')
+        self.setFixedSize(QtCore.QSize(300, 400))
+        self.bbox_buttons = []
+        self.initWidget()
+
+    def initWidget(self):
+        self.setWindowTitle('Dynamic Button List with Scroll')
+
+        # 創建一個總布局
+        layout = QtWidgets.QVBoxLayout(self)
+
+        # 創建一個 QScrollArea，來管理滾動
+        scroll_area = QtWidgets.QScrollArea(self)
+        scroll_area.setWidgetResizable(True)  # 自適應大小
+
+        # 創建一個內部窗口用來承載按鈕
+        button_container = QtWidgets.QWidget()
+        self.button_layout = QtWidgets.QFormLayout(button_container)
+
+        # 設置 scroll_area 的主窗口為按鈕容器
+        scroll_area.setWidget(button_container)
+
+        # 把 scroll_area 添加到主 layout
+        layout.addWidget(scroll_area)
+
     
+    def add_button(self, text:str, index:int):
+        button = BboxButton(text, index, self)
+        button.bbox_button_clicked.connect(lambda: self.bbox_button_clicked.emit(index))
+        self.bbox_buttons.append(button)
+        self.button_layout.addRow(button)
+    
+    def add_buttions(self, patient:Manager.Patient):
+        bboxes = patient.get_bboxes()
+        for index, bbox in enumerate(bboxes):
+            print('slice:{}'.format(bbox.get_start_slice()))
+            self.add_button('slice:{}'.format(bbox.get_start_slice()), index)
+    
+    def clear_buttons(self):
+        """清除當前所有按鈕"""
+        while self.button_layout.count():
+            item = self.button_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
     
     

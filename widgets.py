@@ -410,6 +410,8 @@ class ButtonListWindow(QtWidgets.QWidget):
     
     def set_cls_button_index(self, index:int)->bool:
         self.reset_buttons()
+        if len(self.Cls_buttons) == 0:
+            return False
         if index >= 0 and index < len(self.Cls_buttons):
             self.Cls_buttons[index].set_checked(True)
             return True
@@ -420,10 +422,6 @@ class ButtonListWindow(QtWidgets.QWidget):
         
         return False
         
-        
-            
-        
-
 class BboxButton(QtWidgets.QPushButton):
     bbox_button_clicked = QtCore.pyqtSignal(int)
     def __init__(self, text:str, index:int, parent=None):
@@ -478,6 +476,7 @@ class BboxesButtonListView(QtWidgets.QWidget):
         super().__init__()
         self.setFixedSize(QtCore.QSize(250, 400))
         self.bbox_buttons = []
+        self.bbox_index = -1
         self.initWidget()
 
     def initWidget(self):
@@ -535,7 +534,20 @@ class BboxesButtonListView(QtWidgets.QWidget):
         self.bbox_buttons[index].set_checked(True)
         self.bbox_button_clicked.emit(index)
     
-
+    def set_bbox_button_index(self, index:int)->bool:
+        self.reset_buttons()
+        if len(self.bbox_buttons) == 0:
+            return False
+        
+        if index >= 0 and index < len(self.bbox_buttons):
+            self.bbox_buttons[index].set_checked(True)
+            return True
+        elif index == len(self.bbox_buttons):
+            self.bbox_buttons[len(self.bbox_buttons)-1].set_checked(True)
+        elif index < 0:
+            self.bbox_buttons[0].set_checked(True)
+        return False
+    
 class NextNoduleButton(QtWidgets.QPushButton):
     next_nodule_clicked = QtCore.pyqtSignal()
     def __init__(self, parent=None):
@@ -543,10 +555,16 @@ class NextNoduleButton(QtWidgets.QPushButton):
         self.setText('Next Nodule')
         self.clicked.connect(self.next_nodule_clicked.emit)
 
-    
 class PreviousNoduleButton(QtWidgets.QPushButton):
     previous_nodule_clicked = QtCore.pyqtSignal()
     def __init__(self, parent=None):
         super(PreviousNoduleButton, self).__init__(parent)
         self.setText('Previous Nodule')
         self.clicked.connect(self.previous_nodule_clicked.emit)
+
+class NextBboxButton(QtWidgets.QPushButton):
+    next_bbox_clicked = QtCore.pyqtSignal()
+    def __init__(self, parent=None):
+        super(NextBboxButton, self).__init__(parent)
+        self.setText('Next Bbox')
+        self.clicked.connect(self.next_bbox_clicked.emit)

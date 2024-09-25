@@ -159,6 +159,7 @@ class PlayerView(QtWidgets.QWidget):
         self.show_bbox(image_index)
     
     def show_and_focus_bbox(self, index:int, image_index:int=0):
+        print('focus on bbox {}'.format(index))
         self.reset_bbox_color()
         rect = self.rects[index]
         rect.setBorderColor(QtCore.Qt.green)
@@ -543,4 +544,9 @@ class NextNoduleButton(QtWidgets.QPushButton):
         self.clicked.connect(self.next_nodule_clicked.emit)
 
     
-    
+class PreviousNoduleButton(QtWidgets.QPushButton):
+    previous_nodule_clicked = QtCore.pyqtSignal()
+    def __init__(self, parent=None):
+        super(PreviousNoduleButton, self).__init__(parent)
+        self.setText('Previous Nodule')
+        self.clicked.connect(self.previous_nodule_clicked.emit)

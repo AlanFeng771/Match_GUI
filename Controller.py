@@ -30,7 +30,8 @@ class Controller(QtWidgets.QWidget):
         self.Cls_button_list = widgets.ButtonListWindow() 
         self.bbox_button_list = widgets.BboxesButtonListView()
         self.patient_index_controller = widgets.PatientControlWidget()
-        self.next_node_button = widgets.NextNoduleButton()
+        self.next_nodule_button = widgets.NextNoduleButton()
+        self.previous_nodule_button = widgets.PreviousNoduleButton()
           
         # layout
         VBlayout = QtWidgets.QVBoxLayout(self)
@@ -50,7 +51,8 @@ class Controller(QtWidgets.QWidget):
         VBlayout1.addWidget(QtWidgets.QWidget())
         HBlayout.addLayout(VBlayout1)
         VBlayout.addLayout(HBlayout)
-        VBlayout.addWidget(self.next_node_button)
+        VBlayout.addWidget(self.next_nodule_button)
+        VBlayout.addWidget(self.previous_nodule_button)
         
         # func
         self.load_image_button.load_image_clicked.connect(self.load_image)
@@ -62,7 +64,8 @@ class Controller(QtWidgets.QWidget):
         self.patient_index_controller.next_clicked.connect(self.next_patient)
         self.patient_index_controller.previous_clicked.connect(self.previous_patient)
         self.patient_index_controller.patient_index_changed.connect(self.patient_index_changed)
-        self.next_node_button.next_nodule_clicked.connect(self.next_nodule)
+        self.next_nodule_button.next_nodule_clicked.connect(self.next_nodule)
+        self.previous_nodule_button.previous_nodule_clicked.connect(self.previous_nodule)
         
     def load_image(self, image_path):
         self.patient_ids = [image_path.split('/')[-1].split('.')[0]]
@@ -107,7 +110,7 @@ class Controller(QtWidgets.QWidget):
         patient_index = self.patient_manager.get_current_index()
         if patient_index is None:
             return
-        # self.player_with_bbox.load_bbox(self.patient_manager.get_patient(self.patient_index))
+        self.player_with_bbox.load_bbox(self.patient_manager.get_patient(patient_index))
         self.player_with_bbox.show(0)
         
         self.bbox_button_list.clear_buttons()
@@ -172,7 +175,11 @@ class Controller(QtWidgets.QWidget):
         print(self.cls_index)
         if self.Cls_button_list.set_cls_button_index(self.cls_index+1):
             self.cls_index += 1
-            print('in')
+        self.jump_to_nodule_start_slice(self.cls_index)
+    
+    def previous_nodule(self):
+        if self.Cls_button_list.set_cls_button_index(self.cls_index-1):
+            self.cls_index -= 1
         self.jump_to_nodule_start_slice(self.cls_index)
         
 if __name__ == '__main__':

@@ -5,6 +5,7 @@ class Bbox:
     def __init__(self, bbox):
         self.bbox = bbox
         self.category = None
+        self.nodule_index = -1
     
     def get_annotation(self):
         return self.bbox
@@ -12,8 +13,15 @@ class Bbox:
     def get_start_slice(self):
         return self.bbox[0][2]
     
+    def get_nodule_index(self):
+        return self.nodule_index
+    
     def set_category(self, category):
         self.category = category
+    
+    def set_nodule_index(self, nodule_index):
+        self.nodule_index = nodule_index
+        
 
 class Patient:
     def __init__(self, image_id:str):

@@ -84,7 +84,7 @@ class Controller(QtWidgets.QWidget):
         self.player.show(0)
         self.player_with_bbox.show(0)
         self.Cls_button_list.clear_buttons()
-        self.Cls_button_list.add_buttions(self.Cls_manager.get_patient(self.patient_ids[0]))
+        # self.Cls_button_list.add_buttions(self.Cls_manager.get_patient(self.patient_ids[0]))
         
         self.patient_index_controller.clear()
         self.patient_index_controller.addPatients(self.patient_ids)
@@ -97,7 +97,7 @@ class Controller(QtWidgets.QWidget):
         bbox_paths = [f'{direction_path}/{patient_id}.json' for patient_id in self.patient_ids]
         self.patient_manager.add_bboxes_from_direction(self.patient_ids, bbox_paths)
         
-        self.player_with_bbox.load_bbox(self.patient_manager.get_patient(self.patient_index))
+        # self.player_with_bbox.load_bbox(self.patient_manager.get_patient(self.patient_index))
         self.player_with_bbox.show(0)
         
         self.bbox_button_list.clear_buttons()

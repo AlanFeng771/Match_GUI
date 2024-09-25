@@ -1,4 +1,4 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets 
 import numpy as np
 import cv2
 import json
@@ -163,7 +163,7 @@ class PlayerView(QtWidgets.QWidget):
         
     
 class CustomRectItem(QtWidgets.QGraphicsItem):
-    def __init__(self, size:list[int, int], position:QtCore.QRectF, slices:list, border_color=QtCore.Qt.red, parent=None):
+    def __init__(self, size:tuple, position:QtCore.QRectF, slices:list, border_color=QtCore.Qt.red, parent=None):
         '''
         size: (width, height)
         position: QPointF (center_x, center_y)
@@ -271,5 +271,62 @@ class PreviousPatientButton(QtWidgets.QPushButton):
     
     def previous(self):
         self.previous_clicked.emit()
+
+class ClsButton(QtWidgets.QPushButton):
+    Cls_button_clicked = QtCore.pyqtSignal(int)
+    def __init__(self, text:str, index:int, parent=None):
+        super(ClsButton, self).__init__(parent)
+        self.setText(text)
+        self.index = index
+        self.clicked.connect(lambda: self.Cls_button_clicked.emit(self.index))
+
+class ButtonListWindow(QtWidgets.QWidget):
+    Cls_button_clicked = QtCore.pyqtSignal(int)
+    def __init__(self):
+        super().__init__()
+        self.setFixedSize(QtCore.QSize(300, 400))
+        self.Cls_buttons = []
+        self.initWidget()
+
+    def initWidget(self):
+        self.setWindowTitle('Dynamic Button List with Scroll')
+
+        # 創建一個總布局
+        layout = QtWidgets.QVBoxLayout(self)
+
+        # 創建一個 QScrollArea，來管理滾動
+        scroll_area = QtWidgets.QScrollArea(self)
+        scroll_area.setWidgetResizable(True)  # 自適應大小
+
+        # 創建一個內部窗口用來承載按鈕
+        button_container = QtWidgets.QWidget()
+        self.button_layout = QtWidgets.QFormLayout(button_container)
+
+        # 設置 scroll_area 的主窗口為按鈕容器
+        scroll_area.setWidget(button_container)
+
+        # 把 scroll_area 添加到主 layout
+        layout.addWidget(scroll_area)
+
+    
+    def add_button(self, text:str, index:int):
+        button = ClsButton(text, index, self)
+        button.Cls_button_clicked.connect(lambda: self.Cls_button_clicked.emit(index))
+        self.Cls_buttons.append(button)
+        self.button_layout.addRow(button)
+    
+    def add_buttions(self, patient:Manager.PatientClsElement):
+        cls_elements = patient.get_elements()
+        for index, cls_element in enumerate(cls_elements):
+            self.add_button('slice:{}, cls:{}'.format(cls_element.get_start_slice(), cls_element.get_category()), index)
+    
+    def clear_buttons(self):
+        """清除當前所有按鈕"""
+        while self.button_layout.count():
+            item = self.button_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+    
     
     

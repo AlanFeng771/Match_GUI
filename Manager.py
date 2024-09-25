@@ -1,5 +1,6 @@
 import numpy as np
 import json
+import csv
 class Bbox:
     def __init__(self, bbox):
         self.bbox = bbox
@@ -49,7 +50,7 @@ class PatientManager:
         self.current_patient_index = None
         self.patients = {}
     
-    def get_patient(self, patient_index:int):
+    def get_patient(self, patient_index:int)->Patient:
         patient_ids = list(self.patients.keys())
         patient_id = patient_ids[patient_index]
         if patient_id in self.patients:
@@ -99,7 +100,7 @@ class PatientManager:
     def get_current_id(self):
         return self.current_patient_index
     
-    def get_next_id(self):
+    def get_next_index(self):
         patient_ids = list(self.patients.keys())
         if self.current_patient_index is None:
             return None
@@ -109,7 +110,7 @@ class PatientManager:
         else:
             return self.current_patient_index + 1
     
-    def get_previous_id(self):
+    def get_previous_index(self):
         if self.current_patient_index is None:
             return None
 
@@ -117,6 +118,59 @@ class PatientManager:
             return 0
         else:
             return self.current_patient_index - 1
+
+class ClsElement:
+    def __init__(self, start_slice:int, category:int):
+        self.start_slice = start_slice
+        self.category = category
+        
+    def get_start_slice(self):
+        return self.start_slice
+    
+    def get_category(self):
+        return self.category
+
+class PatientClsElement:
+    def __init__(self, patient_id:str):
+        self.patient_id = patient_id
+        self.cls_elements = []
+    
+    def add_element(self, start_slice:int, category:int):
+        self.cls_elements.append(ClsElement(start_slice, category))
+    
+    def get_elements(self):
+        return self.cls_elements
+    
+    def get_nodule_count(self):
+        return len(self.cls_elements)
+        
+class ClsManager:
+    def __init__(self):
+        self.patient_cls_elements = {}
+    
+    def get_patient(self, patient_id:str)->PatientClsElement:
+        if patient_id in self.patient_cls_elements:
+            return self.patient_cls_elements[patient_id]
+        else:
+            return None
+    
+    def load_csv_file(self, csv_file:str):
+        with open(csv_file, 'r') as file:
+            reader = csv.DictReader(file)
+            
+            for row in reader:
+                img_name = row['Img name']
+                tw_lung_rads = int(row['TW_Lung_RADS'])
+                _, patient_id, start_slice = img_name.split('-')
+                patient_id = patient_id[2:]
+                start_slice = int(start_slice[1:])
+                if patient_id not in self.patient_cls_elements:
+                    self.patient_cls_elements[patient_id] = PatientClsElement(patient_id)
+                    
+                self.patient_cls_elements[patient_id].add_element(start_slice, tw_lung_rads)
+    
+    
+    
     
     
 

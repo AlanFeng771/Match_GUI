@@ -547,6 +547,9 @@ class BboxesButtonListView(QtWidgets.QWidget):
         elif index < 0:
             self.bbox_buttons[0].set_checked(True)
         return False
+
+    def update_bbox_noodule_index(self, index:int, nodule_index:int):
+        self.bbox_buttons[index].set_nodule_index(nodule_index)
     
 class NextNoduleButton(QtWidgets.QPushButton):
     next_nodule_clicked = QtCore.pyqtSignal()
@@ -575,3 +578,10 @@ class PreviousBboxButton(QtWidgets.QPushButton):
         super(PreviousBboxButton, self).__init__(parent)
         self.setText('Previous Bbox')
         self.clicked.connect(self.previous_bbox_clicked.emit)
+
+class ConfirmButton(QtWidgets.QPushButton):
+    confirm_clicked = QtCore.pyqtSignal()
+    def __init__(self, parent=None):
+        super(ConfirmButton, self).__init__(parent)
+        self.setText('Confirm')
+        self.clicked.connect(self.confirm_clicked.emit)

@@ -16,6 +16,9 @@ class Bbox:
     def get_nodule_index(self):
         return self.nodule_index
     
+    def set_node_index(self, nodule_index:int):
+        self.nodule_index = nodule_index
+    
     def set_category(self, category):
         self.category = category
     

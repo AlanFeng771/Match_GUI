@@ -37,6 +37,7 @@ class Controller(QtWidgets.QWidget):
         self.previous_nodule_button = widgets.PreviousNoduleButton()
         self.next_bbox_button = widgets.NextBboxButton()
         self.previous_bbox_button = widgets.PreviousBboxButton()
+        self.confirm_button = widgets.ConfirmButton()
           
         # layout
         VBlayout = QtWidgets.QVBoxLayout(self)
@@ -60,6 +61,8 @@ class Controller(QtWidgets.QWidget):
         VBlayout.addWidget(self.previous_nodule_button)
         VBlayout.addWidget(self.next_bbox_button)
         VBlayout.addWidget(self.previous_bbox_button)
+        VBlayout.addWidget(self.confirm_button)
+        
         
         # shortcuts
         a_shortcut = QtWidgets.QShortcut(QKeySequence('a'), self)
@@ -87,6 +90,7 @@ class Controller(QtWidgets.QWidget):
         self.previous_nodule_button.previous_nodule_clicked.connect(self.previous_nodule)
         self.next_bbox_button.next_bbox_clicked.connect(self.next_bbox)
         self.previous_bbox_button.previous_bbox_clicked.connect(self.previous_bbox)
+        self.confirm_button.confirm_clicked.connect(self.confirm)
         
     def load_image(self, image_path):
         self.patient_ids = [image_path.split('/')[-1].split('.')[0]]
@@ -124,7 +128,6 @@ class Controller(QtWidgets.QWidget):
     def load_bboxes_from_direction(self, direction_path):
         if len(self.patient_ids) == 0:
             return
-
         bbox_paths = [f'{direction_path}/{patient_id}.json' for patient_id in self.patient_ids]
         self.patient_manager.add_bboxes_from_direction(self.patient_ids, bbox_paths)
         
@@ -186,8 +189,8 @@ class Controller(QtWidgets.QWidget):
         if is_valid:
             self.jump_to_nodule_bbox_start_slice(self.bbox_index)
         
-    
     def jump_to_nodule_start_slice(self, nodule_index:int):
+        self.cls_index = nodule_index
         patient_index = self.patient_manager.get_current_index()
         if patient_index is None:
             return
@@ -195,6 +198,7 @@ class Controller(QtWidgets.QWidget):
         self.player.show(image_index)
     
     def jump_to_nodule_bbox_start_slice(self, nodule_index:int):
+        self.bbox_index = nodule_index
         patient_index = self.patient_manager.get_current_index()
         if patient_index is None:
             return
@@ -202,7 +206,6 @@ class Controller(QtWidgets.QWidget):
         self.player_with_bbox.show_and_focus_bbox(index=nodule_index, image_index=image_index)
     
     def next_nodule(self):
-        print(self.cls_index)
         if self.Cls_button_list.set_cls_button_index(self.cls_index+1):
             self.cls_index += 1
         self.jump_to_nodule_start_slice(self.cls_index)
@@ -220,7 +223,20 @@ class Controller(QtWidgets.QWidget):
     def previous_bbox(self):
         if self.bbox_button_list.set_bbox_button_index(self.bbox_index-1):
             self.bbox_index -= 1
-        self.jump_to_nodule_bbox_start_slice(self.bbox_index)   
+        self.jump_to_nodule_bbox_start_slice(self.bbox_index)
+
+    def confirm(self):
+        patient_index = self.patient_manager.get_current_index()
+        if patient_index is None:
+            return
+        patient = self.patient_manager.get_patient(patient_index)
+        bbox = patient.get_bbox(self.bbox_index)
+        
+        if bbox is None:
+            return
+        bbox.set_nodule_index(self.cls_index)
+        self.bbox_button_list.update_bbox_noodule_index(self.bbox_index, self.cls_index)
+        
     
 if __name__ == '__main__':
     import sys

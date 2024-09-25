@@ -174,7 +174,72 @@ class PlayerView(QtWidgets.QWidget):
         del self.rects
         # init bbox annotation
         self.rects = []
+ 
+class PatientIndexBox(QtWidgets.QComboBox):
+    def __init__(self):
+        super(PatientIndexBox, self).__init__()
+        self.setFixedSize(QtCore.QSize(200, 50))
+        self.setMaxVisibleItems(9999)
+
+    def addPatient(self, patient_id:str):
+        self.addItem(patient_id)
+        self.update()
+    
+    def addPatients(self, patient_ids:list):
+        for patient_id in patient_ids:
+            self.addPatient(patient_id)
+    
+    def setPatientIndex(self, index:int):
+        self.setCurrentIndex(index)
+
+class NextPatientButton(QtWidgets.QPushButton):
+    next_clicked = QtCore.pyqtSignal()
+    def __init__(self, parent=None):
+        super(NextPatientButton, self).__init__(parent)
+        self.setText('Next')
+        self.setFixedSize(QtCore.QSize(150, 50))
+
         
+class PreviousPatientButton(QtWidgets.QPushButton):
+    def __init__(self, parent=None):
+        super(PreviousPatientButton, self).__init__(parent)
+        self.setText('Previous')
+        self.setFixedSize(QtCore.QSize(150, 50))
+
+class PatientControlWidget(QtWidgets.QWidget):
+    next_clicked = QtCore.pyqtSignal()
+    previous_clicked = QtCore.pyqtSignal()
+    patient_index_changed = QtCore.pyqtSignal(int)
+    def __init__(self):
+        super(PatientControlWidget, self).__init__()
+        self.initWidget()
+    
+    def initWidget(self):
+        self.patient_index_box = PatientIndexBox()
+        self.next_button = NextPatientButton()
+        self.previous_button = PreviousPatientButton()
+        
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setAlignment(QtCore.Qt.AlignTop)
+        
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.previous_button)
+        layout.addWidget(self.patient_index_box)
+        layout.addWidget(self.next_button)
+        
+        self.next_button.clicked.connect(self.next_clicked.emit)
+        self.previous_button.clicked.connect(self.previous_clicked.emit)
+        self.patient_index_box.currentIndexChanged.connect(self.patient_index_changed.emit)
+    
+    def setPatientIndex(self, index:int):
+        self.patient_index_box.setPatientIndex(index)
+    
+    def addPatients(self, patient_ids:list):
+        self.patient_index_box.addPatients(patient_ids)
+    
+    def clear(self):
+        self.patient_index_box.clear()
+
     
 class CustomRectItem(QtWidgets.QGraphicsItem):
     def __init__(self, size:tuple, position:QtCore.QRectF, slices:list, border_color=QtCore.Qt.red, parent=None):
@@ -210,8 +275,6 @@ class CustomRectItem(QtWidgets.QGraphicsItem):
     
     def getVisible(self):
         return self.is_visible
-    
-    
     
     def is_valid(self, slice):
         print(self.slices, slice)
@@ -249,6 +312,7 @@ class LoadImageDirectionButton(QtWidgets.QPushButton):
     def __init__(self, parent=None):
         super(LoadImageDirectionButton, self).__init__(parent)
         self.setText('Load image direction')
+        self.setFixedSize(QtCore.QSize(260, 50))
         self.clicked.connect(self.load_image_direction)
     
     def load_image_direction(self):
@@ -261,32 +325,14 @@ class LoadAnnotationsDirectionButton(QtWidgets.QPushButton):
     def __init__(self, parent=None):
         super(LoadAnnotationsDirectionButton, self).__init__(parent)
         self.setText('Load annotation direction')
+        self.setFixedSize(QtCore.QSize(260, 50))
         self.clicked.connect(self.load_annotation_direction)
+        self.setEnabled(False)
     
     def load_annotation_direction(self):
         direction_path = QtWidgets.QFileDialog.getExistingDirectory(self, "Open file", "./")
         if direction_path != '':
             self.load_annotation_direction_clicked.emit(direction_path)
-
-class NextPatientButton(QtWidgets.QPushButton):
-    next_clicked = QtCore.pyqtSignal()
-    def __init__(self, parent=None):
-        super(NextPatientButton, self).__init__(parent)
-        self.setText('Next')
-        self.clicked.connect(self.next)
-    
-    def next(self):
-        self.next_clicked.emit()
-        
-class PreviousPatientButton(QtWidgets.QPushButton):
-    previous_clicked = QtCore.pyqtSignal()
-    def __init__(self, parent=None):
-        super(PreviousPatientButton, self).__init__(parent)
-        self.setText('Previous')
-        self.clicked.connect(self.previous)
-    
-    def previous(self):
-        self.previous_clicked.emit()
 
 class ClsButton(QtWidgets.QPushButton):
     Cls_button_clicked = QtCore.pyqtSignal(int)
@@ -300,7 +346,7 @@ class ButtonListWindow(QtWidgets.QWidget):
     Cls_button_clicked = QtCore.pyqtSignal(int)
     def __init__(self):
         super().__init__()
-        self.setFixedSize(QtCore.QSize(300, 400))
+        self.setFixedSize(QtCore.QSize(250, 400))
         self.Cls_buttons = []
         self.initWidget()
 
@@ -357,7 +403,7 @@ class BboxesButtonListView(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         print('create BboxesButtonListView')
-        self.setFixedSize(QtCore.QSize(300, 400))
+        self.setFixedSize(QtCore.QSize(250, 400))
         self.bbox_buttons = []
         self.initWidget()
 

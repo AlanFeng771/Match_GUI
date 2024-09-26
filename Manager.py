@@ -48,7 +48,7 @@ class Patient:
         self.image_path = image_path
     
     def get_images(self):
-        return np.load(self.image_path)
+        return np.load(self.image_path)['image']
     
     def get_bboxes(self):
         return self.bboxes

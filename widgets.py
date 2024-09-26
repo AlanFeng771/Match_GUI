@@ -89,9 +89,14 @@ class PlayerView(QtWidgets.QWidget):
         super(PlayerView, self).__init__()
         self.images = None
         self.rects = []
+        self.setFixedSize(QtCore.QSize(512, 512))
         self.initWidget()
 
     def initWidget(self):
+        label_font = QtGui.QFont()
+        label_font.setFamily('Verdana')
+        label_font.setPointSize(12)
+        label_font.setBold(True)  
         # PhotoViewer
         self.viewer = PhotoViewer(self)
 
@@ -101,10 +106,20 @@ class PlayerView(QtWidgets.QWidget):
         self.scrollBar.setMaximum(0)  # 初始設置為0，因為還沒有圖片加載
         self.scrollBar.valueChanged.connect(self.show)
 
+        # Text
+        self.sliceText = QtWidgets.QLineEdit('0')
+        self.sliceText.setFont(label_font)
+        self.sliceText.setFixedSize(QtCore.QSize(50, 30))
+        self.maxSliceText = QtWidgets.QLabel('/')
+        self.maxSliceText.setFont(label_font)
+        self.maxSliceText.setFixedSize(QtCore.QSize(50, 30))
+        
         # layout
         VBlayout = QtWidgets.QVBoxLayout(self)
         HBlayout = QtWidgets.QHBoxLayout()
         HBlayout.addWidget(self.scrollBar, 10)
+        HBlayout.addWidget(self.sliceText, 1)
+        HBlayout.addWidget(self.maxSliceText, 1)
         VBlayout.addWidget(self.viewer)
         VBlayout.addLayout(HBlayout)
         self.viewer.installEventFilter(self)
@@ -115,7 +130,7 @@ class PlayerView(QtWidgets.QWidget):
         image = QtGui.QImage(image, w, h, w*ch, QtGui.QImage.Format_RGB888)
         pix = QtGui.QPixmap(image)
         return pix
-    
+            
     def load_image(self, patient:Manager.Patient):
         self.images = patient.get_images()
         self.image_index = 0
@@ -155,6 +170,7 @@ class PlayerView(QtWidgets.QWidget):
                 rect.setBorderColor(QtCore.Qt.red)
     
     def show(self, image_index:int=0):
+        self.sliceText.setText(str(image_index))
         self.show_image(image_index)
         self.show_bbox(image_index)
     
@@ -165,7 +181,9 @@ class PlayerView(QtWidgets.QWidget):
         rect.setBorderColor(QtCore.Qt.green)
         
         self.show(image_index)
-        
+    
+    def set_current_scrollbar_index(self, value:int):
+        self.scrollBar.setValue(value)
         
     def reset_rects(self):
         # init

@@ -88,6 +88,73 @@ class PlayerView(QtWidgets.QWidget):
     def __init__(self):
         super(PlayerView, self).__init__()
         self.images = None
+        self.setFixedSize(QtCore.QSize(512, 512))
+        self.initWidget()
+
+    def initWidget(self):
+        label_font = QtGui.QFont()
+        label_font.setFamily('Verdana')
+        label_font.setPointSize(12)
+        label_font.setBold(True)  
+        # PhotoViewer
+        self.viewer = PhotoViewer(self)
+
+        # Scroll bar
+        self.scrollBar = QtWidgets.QScrollBar(QtCore.Qt.Horizontal)
+        self.scrollBar.setMinimum(0)
+        self.scrollBar.setMaximum(0)  # 初始設置為0，因為還沒有圖片加載
+        self.scrollBar.valueChanged.connect(self.show)
+
+        # Text
+        self.sliceText = QtWidgets.QLineEdit('0')
+        self.sliceText.setFont(label_font)
+        self.sliceText.setFixedSize(QtCore.QSize(50, 30))
+        self.maxSliceText = QtWidgets.QLabel('/')
+        self.maxSliceText.setFont(label_font)
+        self.maxSliceText.setFixedSize(QtCore.QSize(50, 30))
+        
+        # layout
+        VBlayout = QtWidgets.QVBoxLayout(self)
+        HBlayout = QtWidgets.QHBoxLayout()
+        HBlayout.addWidget(self.scrollBar, 10)
+        HBlayout.addWidget(self.sliceText, 1)
+        HBlayout.addWidget(self.maxSliceText, 1)
+        VBlayout.addWidget(self.viewer)
+        VBlayout.addLayout(HBlayout)
+        self.viewer.installEventFilter(self)
+    
+    def _numpytoPixmap(self, image):
+        image =  cv2.cvtColor(image.astype(np.uint8), cv2.COLOR_GRAY2RGB)
+        h,w,ch = image.shape
+        image = QtGui.QImage(image, w, h, w*ch, QtGui.QImage.Format_RGB888)
+        pix = QtGui.QPixmap(image)
+        return pix
+            
+    def load_image(self, patient:Manager.Patient):
+        self.images = patient.get_images()
+        self.image_index = 0
+        self.scrollBar.setMaximum(self.images.shape[2]-1)
+        self.show_image()
+    
+    def show_image(self, image_index=0):
+        # init
+        if self.images is not None:  
+            self.viewer.setPhoto(self._numpytoPixmap(self.images[:,:,image_index]))
+            self.viewer.fitInView()
+        self.image_index = image_index
+    
+    
+    def show(self, image_index:int=0):
+        self.sliceText.setText(str(image_index))
+        self.show_image(image_index)
+    
+    def set_current_scrollbar_index(self, value:int):
+        self.scrollBar.setValue(value)
+
+class PlayerWithRectView(QtWidgets.QWidget):
+    def __init__(self):
+        super(PlayerWithRectView, self).__init__()
+        self.images = None
         self.rects = []
         self.setFixedSize(QtCore.QSize(512, 512))
         self.initWidget()
@@ -174,13 +241,11 @@ class PlayerView(QtWidgets.QWidget):
         self.show_image(image_index)
         self.show_bbox(image_index)
     
-    def show_and_focus_bbox(self, index:int, image_index:int=0):
-        print('focus on bbox {}'.format(index))
+    def focus_bbox(self, index:int):
         self.reset_bbox_color()
         rect = self.rects[index]
         rect.setBorderColor(QtCore.Qt.green)
-        
-        self.show(image_index)
+        print('focus bbox')
     
     def set_current_scrollbar_index(self, value:int):
         self.scrollBar.setValue(value)
@@ -603,3 +668,29 @@ class ConfirmButton(QtWidgets.QPushButton):
         super(ConfirmButton, self).__init__(parent)
         self.setText('Confirm')
         self.clicked.connect(self.confirm_clicked.emit)
+        
+class DisplayNoduleTable(QtWidgets.QLabel):
+    def __init__(self):
+        super(DisplayNoduleTable, self).__init__()
+        font = QtGui.QFont()
+        font.setFamily("Arial") #括号里可以设置成自己想要的其它字体
+        font.setPointSize(18)   #括号里的数字可以设置成自己想要的字体大小
+        self.setFixedSize(QtCore.QSize(200, 50))
+        self.setText('Display Table')
+        self.setFont(font)
+    
+    def set_text(self, nodule_id:int):
+        self.setText('Nodule {}'.format(nodule_id))
+
+class DisplayBBoxTable(QtWidgets.QLabel):
+    def __init__(self):
+        super(DisplayBBoxTable, self).__init__()
+        font = QtGui.QFont()
+        font.setFamily("Arial") #括号里可以设置成自己想要的其它字体
+        font.setPointSize(18)   #括号里的数字可以设置成自己想要的字体大小
+        self.setFixedSize(QtCore.QSize(200, 50))
+        self.setText('Display Table')
+        self.setFont(font)
+    
+    def set_text(self, bbox_id:int):
+        self.setText('Bbox {}'.format(bbox_id))

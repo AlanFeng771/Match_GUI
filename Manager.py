@@ -33,16 +33,27 @@ class Patient:
         self.bbox_path = None
         self.image_path = None
         
-    def _process_bboxes(self):
+    def _process_bboxes(self, match:list=[]):
         self.bboxes = []
+        if self.bbox_path is None:
+            return
+            
         with open(self.bbox_path, 'r') as json_file:
             bboxe_list = json.load(json_file)['bboxes']
-        for bbox in bboxe_list:
-            self.bboxes.append(Bbox(bbox))
+            
+        for bbox_index, bbox_data in enumerate(bboxe_list):
+            bbox = Bbox(bbox_data)
+            if bbox_index < len(match):
+                bbox.set_nodule_index(match[bbox_index])
+            self.bboxes.append(bbox)
     
     def set_bbox_path(self, bbox_path:str):
         self.bbox_path = bbox_path
         self._process_bboxes()
+    
+    def set_bbox(self, bbox_path:str, match:list=[]):
+        self.bbox_path = bbox_path
+        self._process_bboxes(match)
     
     def set_image_path(self, image_path:str):
         self.image_path = image_path
@@ -79,6 +90,7 @@ class PatientManager:
         self.current_patient_index = None
         self.current_bbox_index = None
         self.patients = {}
+        self.match_table:dict = {}
     
     def get_patient(self, patient_index:int)->Patient:
         patient_ids = list(self.patients.keys())
@@ -90,10 +102,7 @@ class PatientManager:
             return None
     
     def get_patient_from_id(self, patient_id:str)->Patient:
-        # patient_ids = list(self.patients.keys())
-        # patient_index = patient_ids.index(patient_id)
         if patient_id in self.patients:
-            # self.current_patient_index = patient_index
             return self.patients[patient_id]
         else:
             return None
@@ -114,11 +123,15 @@ class PatientManager:
     def add_bbox_from_file(self, patient_id:str, bbox_path:str):
         if patient_id not in self.patients:
             patient = Patient(patient_id)
-            patient.set_bbox_path(bbox_path)
             self._add_patient(patient)
         else:
             patient = self.get_patient_from_id(patient_id)
-            patient.set_bbox_path(bbox_path)
+            # patient.set_bbox_path(bbox_path)
+        
+        if patient_id in self.match_table:
+            patient.set_bbox(bbox_path, self.match_table[patient_id])
+        else:
+            patient.set_bbox(bbox_path)
         
     def add_images_from_direction(self, patient_ids:list, image_paths:list):
         if len(patient_ids)>0:
@@ -157,8 +170,26 @@ class PatientManager:
         patient_ids = list(self.patients.keys())
         if patient_index < 0 or patient_index >= len(patient_ids):
             return
-        
         self.current_patient_index = patient_index
+    
+    def load_match_table(self, match_table_file:str):
+        with open(match_table_file, 'r') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                patient_id = row['patient_id']
+                if patient_id not in self.match_table:
+                    self.match_table[patient_id] = []
+                
+                self.match_table[patient_id].append(int(row['nodule_id']))
+        
+    def output_match_table(self, match_table_file:str):
+        with open(match_table_file, 'w', newline='') as file:
+            writer = csv.writer(file)
+            for patient_id, patient in self.patients.items():
+                bbox = patient.get_bboxes()
+                for bbox_index, bbox_data in enumerate(bbox):
+                    writer.writerow([patient_id, bbox_index, bbox_data.get_nodule_index()])
+            
     
 
 class ClsElement:

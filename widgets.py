@@ -515,11 +515,13 @@ class BboxButton(QtWidgets.QPushButton):
         self.clicked.connect(lambda: self.bbox_button_clicked.emit(self.index))
 
 class BboxNoduleBox(QtWidgets.QComboBox):
+    bbox_index_changed = QtCore.pyqtSignal(int)
     def __init__(self, nodule_count:int):
         super(BboxNoduleBox, self).__init__()
         self.setFixedSize(QtCore.QSize(80, 20))
         self.setMaxVisibleItems(9999)
         self.addNodules(nodule_count)
+        self.currentIndexChanged.connect(lambda index: self.bbox_index_changed.emit(index))
 
     def addNodule(self, nodule_index:int):
         self.addItem('nodule {}'.format(nodule_index))
@@ -534,13 +536,15 @@ class BboxNoduleBox(QtWidgets.QComboBox):
         
 class BboxItem(QtWidgets.QWidget):
     bbox_button_clicked = QtCore.pyqtSignal(int)
+    bbox_index_changed = QtCore.pyqtSignal(int, int)
     def __init__(self, text:str, index:int, nodule_count:int, nodule_index:int, parent=None):
         super(BboxItem, self).__init__(parent)
+        self.bbox_index = index
         self.bbox = BboxButton(text, index, self)
         self.nodule_box = BboxNoduleBox(nodule_count)
+        self.nodule_box.currentIndexChanged.connect(lambda nodule_index: self.bbox_index_changed.emit(self.bbox_index, nodule_index))
         self.set_nodule_index(nodule_index)
         self.bbox.clicked.connect(lambda: self.bbox_button_clicked.emit(index))
-        
         
         layout = QtWidgets.QHBoxLayout(self)
         layout.addWidget(self.bbox)
@@ -555,9 +559,11 @@ class BboxItem(QtWidgets.QWidget):
 
 class BboxesButtonListView(QtWidgets.QWidget):
     bbox_button_clicked = QtCore.pyqtSignal(int)
+    bbox_index_changed = QtCore.pyqtSignal(str, int ,int)
     def __init__(self):
         super().__init__()
         self.setFixedSize(QtCore.QSize(250, 400))
+        self.patient_id = ''
         self.bbox_buttons = []
         self.bbox_index = -1
         self.initWidget()
@@ -585,6 +591,7 @@ class BboxesButtonListView(QtWidgets.QWidget):
     
     def add_bbox(self, text:str, index:int, nodule_count:int, nodule_index:int):
         button = BboxItem(text, index, nodule_count, nodule_index, self)
+        button.bbox_index_changed.connect(lambda bbox_index, nodule_index: self.bbox_index_changed.emit(self.patient_id, bbox_index, nodule_index))
         button.bbox_button_clicked.connect(self.bbox_clickd)
         self.bbox_buttons.append(button)
         self.button_layout.addRow(button)
@@ -592,7 +599,7 @@ class BboxesButtonListView(QtWidgets.QWidget):
     def add_bboxes(self, patient:Manager.Patient, patient_cls_element:Manager.PatientClsElement):
         del self.bbox_buttons
         self.bbox_buttons = []
-        
+        self.patient_id = patient.get_image_id()
         bboxes = patient.get_bboxes()
         for index, bbox in enumerate(bboxes):
             self.add_bbox('Bbox {}, slice:{}'.format(index, bbox.get_start_slice()), index, patient_cls_element.get_nodule_count(), bbox.get_nodule_index())
@@ -633,6 +640,8 @@ class BboxesButtonListView(QtWidgets.QWidget):
 
     def update_bbox_noodule_index(self, index:int, nodule_index:int):
         self.bbox_buttons[index].set_nodule_index(nodule_index)
+    
+    
     
 class NextNoduleButton(QtWidgets.QPushButton):
     next_nodule_clicked = QtCore.pyqtSignal()
@@ -694,3 +703,11 @@ class DisplayBBoxTable(QtWidgets.QLabel):
     
     def set_text(self, bbox_id:int):
         self.setText('Bbox {}'.format(bbox_id))
+
+class OutputButton(QtWidgets.QPushButton):
+    button_clicked = QtCore.pyqtSignal()
+    def __init__(self):
+        super(OutputButton, self).__init__()
+        self.setFixedSize(QtCore.QSize(200, 50))
+        self.setText('Output')
+        self.clicked.connect(lambda: self.button_clicked.emit())

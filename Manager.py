@@ -84,6 +84,8 @@ class Patient:
             return False
         else:
             return True
+    def get_image_id(self):
+        return self.image_id
 
 class PatientManager:
     def __init__(self):
@@ -185,6 +187,7 @@ class PatientManager:
     def output_match_table(self, match_table_file:str):
         with open(match_table_file, 'w', newline='') as file:
             writer = csv.writer(file)
+            writer.writerow(['patient_id', 'bbox_id', 'nodule_id'])
             for patient_id, patient in self.patients.items():
                 bbox = patient.get_bboxes()
                 for bbox_index, bbox_data in enumerate(bbox):

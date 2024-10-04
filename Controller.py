@@ -17,7 +17,7 @@ class Controller(QtWidgets.QWidget):
         self.cls_index = 0
         self.bbox_index = 0
         self.Cls_manager.load_csv_file(r'E:\workspace\python\Tools\check_nodule_classification\lung_M_class_0001-1800.csv')
-        self.patient_manager.load_match_table(r'match_table.csv')
+        self.patient_manager.load_match_table(r'match_table_temp.csv')
         self.patient_ids = []
         self.initWidget()
         
@@ -41,6 +41,7 @@ class Controller(QtWidgets.QWidget):
         self.confirm_button = widgets.ConfirmButton()
         self.display_label1 = widgets.DisplayNoduleTable()
         self.display_label2 = widgets.DisplayBBoxTable()
+        self.output_button = widgets.OutputButton()
         
         # main layout
         HBlayout = QtWidgets.QHBoxLayout(self)
@@ -80,6 +81,9 @@ class Controller(QtWidgets.QWidget):
         control_VBlayout.addLayout(table_HBlayout)
         ## confirm
         control_VBlayout.addWidget(self.confirm_button)
+        
+        ## output
+        control_VBlayout.addWidget(self.output_button)
         control_VBlayout.addWidget(QtWidgets.QWidget())
         
         HBlayout.addLayout(nodule_VBlayout)
@@ -106,6 +110,7 @@ class Controller(QtWidgets.QWidget):
         self.load_bbox_direction_button.load_annotation_direction_clicked.connect(self.load_bboxes_from_direction)
         self.Cls_button_list.Cls_button_clicked.connect(self.jump_to_nodule_start_slice)
         self.bbox_button_list.bbox_button_clicked.connect(self.jump_to_nodule_bbox_start_slice)
+        self.bbox_button_list.bbox_index_changed.connect(self.change_bbox_id_nodule_id)
         self.patient_index_controller.next_clicked.connect(self.next_patient)
         self.patient_index_controller.previous_clicked.connect(self.previous_patient)
         self.patient_index_controller.patient_index_changed.connect(self.patient_index_changed)
@@ -114,6 +119,7 @@ class Controller(QtWidgets.QWidget):
         self.next_bbox_button.next_bbox_clicked.connect(self.next_bbox)
         self.previous_bbox_button.previous_bbox_clicked.connect(self.previous_bbox)
         self.confirm_button.confirm_clicked.connect(self.confirm)
+        self.output_button.button_clicked.connect(self.output)
         
     def load_image(self, image_path):
         self.patient_ids = [image_path.split('/')[-1].split('.')[0]]
@@ -265,6 +271,16 @@ class Controller(QtWidgets.QWidget):
             return
         bbox.set_nodule_index(self.cls_index)
         self.bbox_button_list.update_bbox_noodule_index(self.bbox_index, self.cls_index)
+        
+    def output(self):
+        self.patient_manager.output_match_table(r'match_table_temp.csv')
+    
+    def change_bbox_id_nodule_id(self, patient_id, bbox_index, nodule_index):
+        patient = self.patient_manager.get_patient_from_id(patient_id)
+        bbox = patient.get_bbox(bbox_index)
+        if bbox is None:
+            return
+        bbox.set_nodule_index(nodule_index)
     
 if __name__ == '__main__':
     import sys

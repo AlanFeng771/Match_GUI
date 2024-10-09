@@ -16,8 +16,13 @@ class Controller(QtWidgets.QWidget):
         self.patient_ids = []
         self.cls_index = 0
         self.bbox_index = 0
-        self.Cls_manager.load_csv_file(r'E:\workspace\python\Tools\check_nodule_classification\lung_M_class_0001-1800.csv')
+        self.annotation_file = r'E:\workspace\python\Tools\check_nodule_classification\lung_M_class_0001-1800.csv'
+        self.mask_root = r'npz'
+        self.Cls_manager.set_mask_root(self.mask_root)
+        self.Cls_manager.load_csv_file(self.annotation_file)
+    
         self.patient_manager.load_match_table(r'match_table_temp.csv')
+        
         self.patient_ids = []
         self.initWidget()
         
@@ -104,8 +109,6 @@ class Controller(QtWidgets.QWidget):
         space_shortcut.activated.connect(self.confirm)
         
         # func
-        self.load_image_button.load_image_clicked.connect(self.load_image)
-        self.load_bbox_button.load_annotation_clicked.connect(self.load_bbox)
         self.load_image_direction_button.load_image_direction_clicked.connect(self.load_images_from_direction)
         self.load_bbox_direction_button.load_annotation_direction_clicked.connect(self.load_bboxes_from_direction)
         self.Cls_button_list.Cls_button_clicked.connect(self.jump_to_nodule_start_slice)
@@ -121,31 +124,19 @@ class Controller(QtWidgets.QWidget):
         self.confirm_button.confirm_clicked.connect(self.confirm)
         self.output_button.button_clicked.connect(self.output)
         
-    def load_image(self, image_path):
-        self.patient_ids = [image_path.split('/')[-1].split('.')[0]]
-        self.patient_manager.add_image_from_file(self.patient_ids[0], image_path)
-        self.player.load_image(self.patient_manager.get_patient(0))
-
-    def load_bbox(self, bbox_path):
-        self.patient_manager.add_bbox_from_file(self.patient_ids[0], bbox_path)
-        self.player.load_bbox(self.patient_manager.get_patient(0))
-        
-        self.bbox_button_list.clear_buttons()
-        self.bbox_button_list.add_buttions(self.patient_manager.get_patient(0))
-        
     def load_images_from_direction(self, direction_path):
         self.patient_ids = [path.split('/')[-1].split('.')[0] for path in os.listdir(direction_path)]
         if len(self.patient_ids) == 0:
             return
         
-        image_paths = [f'{direction_path}/{patient_id}.npz' for patient_id in self.patient_ids]
+        image_paths = [f'{direction_path}/{patient_id}.npy' for patient_id in self.patient_ids]
         self.patient_manager.add_images_from_direction(self.patient_ids, image_paths)
         
         patient_index = self.patient_manager.get_current_index()
         if patient_index is None:
             return
-        self.player.load_image(self.patient_manager.get_patient(patient_index))
-        self.player_with_bbox.load_image(self.patient_manager.get_patient(patient_index))
+        # self.player.load_image(self.patient_manager.get_patient(patient_index))
+        # self.player_with_bbox.load_image(self.patient_manager.get_patient(patient_index))
         self.Cls_button_list.clear_buttons()
         
         self.patient_index_controller.clear()
@@ -204,7 +195,7 @@ class Controller(QtWidgets.QWidget):
         self.cls_index = 0
         self.bbox_index = 0
         
-        self.player.load_image(patient)
+        self.player.load_image(patient, cls_patient)
         
         is_valid = self.Cls_button_list.set_cls_button_index(self.cls_index)
         if is_valid:

@@ -1,6 +1,8 @@
 import numpy as np
 import json
 import csv
+import tools.tools as tools
+import os
 class Bbox:
     def __init__(self, bbox):
         self.bbox = bbox
@@ -37,6 +39,10 @@ class Patient:
         self.bboxes = []
         if self.bbox_path is None:
             return
+
+        if os.path.exists(self.bbox_path) is False:
+            print('bbox file not found:', self.bbox_path)
+            return
             
         with open(self.bbox_path, 'r') as json_file:
             bboxe_list = json.load(json_file)['bboxes']
@@ -59,7 +65,8 @@ class Patient:
         self.image_path = image_path
     
     def get_images(self):
-        return np.load(self.image_path)['image']
+        # return np.load(self.image_path)['image']
+        return tools.normalize_raw_image(np.load(self.image_path))
     
     def get_bboxes(self):
         return self.bboxes
@@ -192,9 +199,7 @@ class PatientManager:
                 bbox = patient.get_bboxes()
                 for bbox_index, bbox_data in enumerate(bbox):
                     writer.writerow([patient_id, bbox_index, bbox_data.get_nodule_index()])
-            
     
-
 class ClsElement:
     def __init__(self, start_slice:int, category:int):
         self.start_slice = start_slice
@@ -210,6 +215,7 @@ class PatientClsElement:
     def __init__(self, patient_id:str):
         self.patient_id = patient_id
         self.cls_elements = []
+        self.mask_path = None
     
     def add_element(self, start_slice:int, category:int):
         self.cls_elements.append(ClsElement(start_slice, category))
@@ -219,10 +225,19 @@ class PatientClsElement:
     
     def get_nodule_count(self):
         return len(self.cls_elements)
+    
+    def set_mask_path(self, mask_path:str):
+        self.mask_path = mask_path
+        
+    def get_contour_images(self):
+        mask = np.load(self.mask_path)['image']
+        
+        return mask
         
 class ClsManager:
     def __init__(self):
         self.patient_cls_elements = {}
+        self.mask_root = None
     
     def get_patient(self, patient_id:str)->PatientClsElement:
         if patient_id in self.patient_cls_elements:
@@ -230,6 +245,9 @@ class ClsManager:
         else:
             return None
     
+    def set_mask_root(self, mask_root:str):
+        self.mask_root = mask_root
+        
     def load_csv_file(self, csv_file:str):
         with open(csv_file, 'r') as file:
             reader = csv.DictReader(file)
@@ -242,6 +260,10 @@ class ClsManager:
                 start_slice = int(start_slice[1:])
                 if patient_id not in self.patient_cls_elements:
                     self.patient_cls_elements[patient_id] = PatientClsElement(patient_id)
+                
+                if self.mask_root is not None:
+                    mask_path = os.path.join(self.mask_root, patient_id + '.npz')
+                    self.patient_cls_elements[patient_id].set_mask_path(mask_path)
                     
                 self.patient_cls_elements[patient_id].add_element(start_slice, tw_lung_rads)
     

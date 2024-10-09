@@ -13,6 +13,7 @@ class PhotoViewer(QtWidgets.QGraphicsView):
         self._scene = QtWidgets.QGraphicsScene(self)
         self._photo = QtWidgets.QGraphicsPixmapItem()
         self._scene.addItem(self._photo)
+        self.current_contour_item = None
         self.setScene(self._scene)
         self.setTransformationAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
@@ -38,17 +39,23 @@ class PhotoViewer(QtWidgets.QGraphicsView):
                 self.scale(factor, factor)
             self._zoom = 0
     
-    def setPhoto(self, pixmap=None):
+    
+    def setPhoto(self, pixmap=None, contour_item=None):
         if pixmap and not pixmap.isNull():
             self._empty = False
             self.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
             self._photo.setPixmap(pixmap)
             self._photo.setTransformationMode(QtCore.Qt.SmoothTransformation)
+            if contour_item is not None:
+                if self.current_contour_item is not None:
+                    self._scene.removeItem(self.current_contour_item)
+                self.current_contour_item = contour_item
+                self._scene.addItem(contour_item)
         else:
             self._empty = True
             self.setDragMode(QtWidgets.QGraphicsView.NoDrag)
             self._photo.setPixmap(QtGui.QPixmap())
-    
+
     def add_item(self, item: QtWidgets.QGraphicsItem):
         self._scene.addItem(item)
     
@@ -88,6 +95,7 @@ class PlayerView(QtWidgets.QWidget):
     def __init__(self):
         super(PlayerView, self).__init__()
         self.images = None
+        self.contour_images = None
         self.setFixedSize(QtCore.QSize(512, 512))
         self.initWidget()
 
@@ -129,18 +137,38 @@ class PlayerView(QtWidgets.QWidget):
         image = QtGui.QImage(image, w, h, w*ch, QtGui.QImage.Format_RGB888)
         pix = QtGui.QPixmap(image)
         return pix
-            
-    def load_image(self, patient:Manager.Patient):
+    
+    def _generate_contour_item(self, contour_image):
+        height, width = contour_image.shape
+        contour_pixmap = QtGui.QPixmap(width, height)
+        contour_pixmap.fill(QtCore.Qt.transparent)
+        painter = QtGui.QPainter(contour_pixmap)
+        for y in range(height):
+            for x in range(width):
+                if contour_image[y, x] == 255:  # If it's an edge
+                    painter.setPen(QtGui.QColor(255, 0, 0, contour_image[y, x]))  # Red color for edges
+                    painter.drawPoint(x, y)
+        painter.end()
+        contour_item = QtWidgets.QGraphicsPixmapItem(contour_pixmap)
+        
+        return contour_item
+        
+    def load_image(self, patient:Manager.Patient, patient_cls_element:Manager.PatientClsElement):
         self.images = patient.get_images()
         self.image_index = 0
+        self.contour_images = patient_cls_element.get_contour_images()
         self.scrollBar.setMaximum(self.images.shape[2]-1)
         self.show_image()
     
     def show_image(self, image_index=0):
         # init
-        if self.images is not None:  
-            self.viewer.setPhoto(self._numpytoPixmap(self.images[:,:,image_index]))
-            self.viewer.fitInView()
+        if self.contour_images is not None:
+            contour_item = self._generate_contour_item(self.contour_images[:,:,image_index])
+        else:
+            contour_item = None
+        if self.images is not None: 
+            self.viewer.setPhoto(self._numpytoPixmap(self.images[:,:,image_index]), contour_item)
+            # self.viewer.fitInView()
         self.image_index = image_index
     
     
@@ -220,7 +248,7 @@ class PlayerWithRectView(QtWidgets.QWidget):
         # init
         if self.images is not None:  
             self.viewer.setPhoto(self._numpytoPixmap(self.images[:,:,image_index]))
-            self.viewer.fitInView()
+            # self.viewer.fitInView()
         self.image_index = image_index
     
     def show_bbox(self, image_index=0):

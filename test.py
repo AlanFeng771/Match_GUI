@@ -1,43 +1,79 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QScrollArea, QFormLayout
+from PyQt5.QtWidgets import QApplication, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QMainWindow
+from PyQt5.QtGui import QImage, QPixmap, QPainter, QColor
+from PyQt5.QtCore import Qt
+import cv2
+import numpy as np
 
-class ButtonListWindow(QWidget):
-    def __init__(self):
+class ImageWindow(QMainWindow):
+    def __init__(self, image_path, mask_path):
         super().__init__()
-        self.initUI()
 
-    def initUI(self):
-        self.setWindowTitle('Dynamic Button List with Scroll')
+        # Load the original image and mask
+        self.image = cv2.imread(image_path)
+        self.mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+        self.mask = cv2.threshold(self.mask, 127, 255, cv2.THRESH_BINARY)[1]  # Ensure binary mask
 
-        # 創建一個總布局
-        layout = QVBoxLayout(self)
+        # Convert the original image to RGB format for PyQt
+        self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
 
-        # 創建一個 QScrollArea，來管理滾動
-        scroll_area = QScrollArea(self)
-        scroll_area.setWidgetResizable(True)  # 自適應大小
+        # Resize the mask to match the image size (if necessary)
+        if self.image.shape[:2] != self.mask.shape[:2]:
+            self.mask = cv2.resize(self.mask, (self.image.shape[1], self.image.shape[0]))
 
-        # 創建一個內部窗口用來承載按鈕
-        button_container = QWidget()
-        button_layout = QFormLayout(button_container)
+        # Use Canny edge detection to find the edges in the mask
+        self.edges = cv2.Canny(self.mask, 100, 200)
+        
+        # Set up the QGraphicsView and QGraphicsScene
+        self.view = QGraphicsView(self)
+        self.scene = QGraphicsScene(self)
+        self.view.setScene(self.scene)
+        self.setCentralWidget(self.view)
 
-        # 動態添加按鈕
-        self.buttons = []
-        for i in range(5):  # 可以調整按鈕數量
-            button = QPushButton(f'Button {i + 1}', self)
-            self.buttons.append(button)
-            button_layout.addRow(button)
+        # Display the original image
+        self.display_image()
 
-        # 設置 scroll_area 的主窗口為按鈕容器
-        scroll_area.setWidget(button_container)
+        # Display the mask edges on top of the image
+        self.display_edges()
 
-        # 把 scroll_area 添加到主 layout
-        layout.addWidget(scroll_area)
+        # Set an initial zoom factor to enlarge the image
+        self.zoom_factor = 1.5  # You can adjust this value for larger/smaller scaling
+        self.view.scale(self.zoom_factor, self.zoom_factor)  # Apply scaling
 
-        # 設置窗口大小
-        self.setGeometry(200, 200, 20, 20)
+    def display_image(self):
+        # Convert the image to QImage
+        height, width, channel = self.image.shape
+        qimage = QImage(self.image.data, width, height, 3 * width, QImage.Format_RGB888)
 
-if __name__ == '__main__':
+        # Convert QImage to QPixmap and add to scene
+        pixmap = QPixmap.fromImage(qimage)
+        image_item = QGraphicsPixmapItem(pixmap)
+        self.scene.addItem(image_item)
+
+    def display_edges(self):
+        # Create a QPixmap for the edges
+        height, width = self.edges.shape
+        edge_pixmap = QPixmap(width, height)
+        edge_pixmap.fill(Qt.transparent)  # Start with a transparent pixmap
+
+        # Use QPainter to draw the edges onto the QPixmap
+        painter = QPainter(edge_pixmap)
+        painter.setPen(QColor(255, 0, 0))  # Red color for edges
+        for y in range(height):
+            for x in range(width):
+                if self.edges[y, x] == 255:  # If it's an edge
+                    painter.drawPoint(x, y)
+        painter.end()
+
+        # Convert the edge pixmap to a QGraphicsPixmapItem and add to scene
+        edge_item = QGraphicsPixmapItem(edge_pixmap)
+        self.scene.addItem(edge_item)
+
+if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = ButtonListWindow()
+
+    # Replace 'image.jpg' and 'mask.png' with your image and mask file paths
+    window = ImageWindow("ldct.jpg", "mask.jpg")
     window.show()
+
     sys.exit(app.exec_())

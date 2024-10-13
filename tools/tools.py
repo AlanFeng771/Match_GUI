@@ -25,8 +25,8 @@ def normalize_raw_image(image: np.ndarray, window_level: int = DEFAULT_WINDOW_LE
     image = image.astype(np.float32) / (hu_max - hu_min)
     image = image * 255
     image = image.astype(np.uint8)
-    print('max:', np.max(image))
-    print('min:', np.min(image))
+    # print('max:', np.max(image))
+    # print('min:', np.min(image))
     return image
 
 def get_contour_from_mask(mask: np.ndarray) -> np.ndarray:

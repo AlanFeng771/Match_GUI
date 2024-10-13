@@ -10,7 +10,7 @@ class Bbox:
         self.bbox_index = bbox_index
         self.category = None
         self.nodule_index = -1
-        self.type = 1
+        self.type = 0
         self.box_group = bbox_index
     
     def get_annotation(self):
@@ -37,7 +37,7 @@ class Bbox:
     def set_nodule_index(self, nodule_index):
         self.nodule_index = nodule_index
     
-    def set_type(self, bbox_type:int):
+    def set_box_type(self, bbox_type:int):
         self.type = bbox_type
     
     def set_group(self, box_group:int):

@@ -1,4 +1,5 @@
 from itertools import count
+from re import M
 from PyQt5 import QtCore, QtGui, QtWidgets 
 import numpy as np
 import cv2
@@ -284,7 +285,7 @@ class PlayerWithRectView(QtWidgets.QWidget):
         self.reset_bbox_color()
         rect = self.rects[index]
         rect.setBorderColor(QtCore.Qt.GlobalColor.green)
-        print('focus bbox')
+        # print('focus bbox')
     
     def set_current_scrollbar_index(self, value:int):
         self.scrollBar.setValue(value)
@@ -698,37 +699,53 @@ class BboxTypeButton(QtWidgets.QPushButton):
         self.setChecked(checked)
         
 class Box(QtWidgets.QComboBox):
+    bbox_index_changed = QtCore.pyqtSignal(int)
+
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        # self.setFixedSize(QtCore.QSize(80, 20))
         self.setMaxVisibleItems(9999)
-        
-    def add_item(self, nodule_index:int, type:str='nodule'):
+        self._updating = False  # 用來追蹤是否在更新
+
+        # 綁定 currentIndexChanged 信號
+        self.currentIndexChanged.connect(self.on_index_changed)
+
+    def on_index_changed(self, index: int):
+        if not self._updating:  # 只有當非更新狀態時才發送信號
+            self.bbox_index_changed.emit(index)
+
+    def add_item(self, nodule_index: int, type: str = 'nodule'):
         if type == 'nodule':
-            self.addItem('nodule {}'.format(nodule_index))
+            self.addItem(f'nodule {nodule_index}')
         elif type == 'bbox':
-            self.addItem('bbox {}'.format(nodule_index))
+            self.addItem(f'bbox {nodule_index}')
         else:
-            self.addItem('{}'.format(nodule_index))
+            self.addItem(f'{nodule_index}')
         self.update()
-    
-    def add_items(self, nodule_count:int, type:str='nodule'):
+
+    def add_items(self, nodule_count: int, type: str = 'nodule'):
+        self._updating = True  # 標記為更新狀態
         self.clear()
+
         for nodule_index in range(nodule_count):
             self.add_item(nodule_index, type=type)
-    
-    def set_item_index(self, index:int):
+
+        self._updating = False  # 結束更新狀態
+
+    def set_item_index(self, index: int):
         self.setCurrentIndex(index)
-    
+
     def box_item_clear(self):
+        self._updating = True  # 暫停信號發送
         self.clear()
+        self._updating = False
         
 class BboxTypeButtons(QtWidgets.QWidget):
-    bbox_type_button_clicked = QtCore.pyqtSignal(str)
+    bbox_type_button_clicked = QtCore.pyqtSignal(int)
     def __init__(self, parent=None):
         super(BboxTypeButtons, self).__init__(parent)
         self.button_texts = ['Match', 'Combine', 'Delete', 'Other']
         self.buttons = [BboxTypeButton(text) for text in self.button_texts]
+        self.button_index = 0
         
         button_layout = QtWidgets.QHBoxLayout(self)
         for button in self.buttons:
@@ -741,21 +758,22 @@ class BboxTypeButtons(QtWidgets.QWidget):
                 button.set_checked(True)
             else:
                 button.set_checked(False)
-        self.bbox_type_button_clicked.emit(text)
+        self.button_index = self.button_texts.index(text)
+        self.bbox_type_button_clicked.emit(self.button_texts.index(text))
     
     def empty(self):
         for button in self.buttons:
             button.set_checked(False)
     
     def set_button_index(self, index:int):
+        self.button_index = index
         self.empty()
         if index != -1 and index < len(self.buttons):
             self.buttons[index].set_checked(True)
-            
-            
-        
+              
 class BboxInfoWidget(QtWidgets.QWidget):
-    bbox_type_button_clicked = QtCore.pyqtSignal(str)
+    bbox_type_button_clicked = QtCore.pyqtSignal(int)
+    bbox_index_changed = QtCore.pyqtSignal(int, int)
     def __init__(self):
         super(BboxInfoWidget, self).__init__()
         self.initWidget()
@@ -763,29 +781,31 @@ class BboxInfoWidget(QtWidgets.QWidget):
     def initWidget(self):
         self.bbox_type_buttons = BboxTypeButtons()
         self.box = Box()
-        self.bbox_type_buttons.bbox_type_button_clicked.connect(lambda text: self.bbox_type_button_clicked.emit(text))
+        self.bbox_type_buttons.bbox_type_button_clicked.connect(lambda index: self.bbox_type_button_clicked.emit(index))
+        self.box.bbox_index_changed.connect(self.bbox_index_changed_func)
         info_layout = QtWidgets.QVBoxLayout(self)
         info_layout.addWidget(self.bbox_type_buttons)
         info_layout.addWidget(self.box)
-        
+    
+    def bbox_index_changed_func(self, index:int):
+        if index != -1:
+            self.bbox_index_changed.emit(index, self.bbox_type_buttons.button_index)
     
     def add_box_items(self, item_count:int, type:str='nodule', index:int=0):
         self.box.add_items(item_count, type=type)
         self.box.set_item_index(index)
+        
     
-    def rest_box(self, type_index:int, **kwargs):
-        if type_index == 0:
-            self.add_box_items(kwargs['nodule_count'], type='nodule')
-            self.box.set_item_index(kwargs['nodule_index'])
-        elif type_index == 1:
-            self.add_box_items(kwargs['bbox_count'], type='bbox')
-            self.box.set_item_index(kwargs['bbox_index'])
-        self.bbox_type_buttons.set_button_index(type_index)
-    
-    
-    
-
-            
+    def rest_box(self, box:Manager.Bbox):
+        if box is not None:
+            type_index = box.get_bbox_type()
+            # print('type_index:', type_index, 'nodule_index:', box.get_nodule_index(), 'bbox_group:', box.get_box_group())
+            if type_index == 0:
+                self.add_box_items(10, 'nodule', box.get_nodule_index())
+            elif type_index == 1:
+                self.add_box_items(10, 'bbox', box.get_box_group())
+                
+            self.bbox_type_buttons.set_button_index(type_index)
 
 class NextNoduleButton(QtWidgets.QPushButton):
     next_nodule_clicked = QtCore.pyqtSignal()

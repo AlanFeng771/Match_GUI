@@ -1,3 +1,5 @@
+from calendar import c
+from operator import index
 import re
 from PyQt5.QtCore import Qt
 from PyQt5 import QtWidgets
@@ -44,6 +46,7 @@ class Controller(QtWidgets.QWidget):
         self.display_label1 = widgets.DisplayNoduleTable()
         self.display_label2 = widgets.DisplayBBoxTable()
         self.output_button = widgets.OutputButton()
+        self.bbox_info_display = widgets.BboxInfoWidget()
         
         # main layout
         HBlayout = QtWidgets.QHBoxLayout(self)
@@ -80,6 +83,10 @@ class Controller(QtWidgets.QWidget):
         table_HBlayout.addWidget(self.Cls_button_list)
         table_HBlayout.addWidget(self.bbox_button_list)
         control_VBlayout.addLayout(table_HBlayout)
+        
+        ## bbox info
+        control_VBlayout.addWidget(self.bbox_info_display)
+        
         ## confirm
         control_VBlayout.addWidget(self.confirm_button)
         
@@ -108,8 +115,8 @@ class Controller(QtWidgets.QWidget):
         self.load_image_direction_button.load_image_direction_clicked.connect(self.load_images_from_direction)
         self.load_bbox_direction_button.load_annotation_direction_clicked.connect(self.load_bboxes_from_direction)
         self.Cls_button_list.Cls_button_clicked.connect(self.jump_to_nodule_start_slice)
-        self.bbox_button_list.bbox_button_clicked.connect(self.jump_to_nodule_bbox_start_slice)
-        self.bbox_button_list.bbox_index_changed.connect(self.change_bbox_id_nodule_id)
+        self.bbox_button_list.bbox_button_clicked.connect(self.bbox_index_changed)
+        # self.bbox_button_list.bbox_index_changed.connect(self.change_bbox_id_nodule_id)
         self.patient_index_controller.next_clicked.connect(self.next_patient)
         self.patient_index_controller.previous_clicked.connect(self.previous_patient)
         self.patient_index_controller.patient_index_changed.connect(self.patient_index_changed)
@@ -119,7 +126,27 @@ class Controller(QtWidgets.QWidget):
         self.previous_bbox_button.previous_bbox_clicked.connect(self.previous_bbox)
         self.confirm_button.confirm_clicked.connect(self.confirm)
         self.output_button.button_clicked.connect(self.output)
+        self.bbox_info_display.bbox_type_button_clicked.connect(self.box_info_type_changed)
+    
+    def bbox_index_changed(self, box_index):
+        self.jump_to_nodule_bbox_start_slice(box_index)
+        patient = self.patient_manager.get_patient(self.patient_manager.get_current_index())
+        if patient is None:
+            return
         
+        box = patient.get_bbox(self.bbox_index)
+        if box is not None:
+            box_type = box.get_bbox_type()
+            print('box_type',box_type)
+            if box_type == 0:
+                cls_patient = self.Cls_manager.get_patient(self.patient_ids[self.patient_manager.get_current_index()])
+                if cls_patient is not None:
+                    self.bbox_info_display.rest_box(box_type, nodule_count=cls_patient.get_nodule_count(), nodule_index=box.get_nodule_index())
+            elif box_type == 1:
+                self.bbox_info_display.rest_box(box_type, bbox_count=patient.get_box_count(), bbox_index=box.get_box_group())
+            else:
+                self.bbox_info_display.rest_box(box_type)
+    
     def load_images_from_direction(self, direction_path):
         self.patient_ids = [path.split('/')[-1].split('.')[0] for path in os.listdir(direction_path)]
         if len(self.patient_ids) == 0:
@@ -179,6 +206,7 @@ class Controller(QtWidgets.QWidget):
         patient = self.patient_manager.get_patient(index)
         cls_patient = self.Cls_manager.get_patient(self.patient_ids[index])
         patient_index = self.patient_manager.get_current_index()
+        
         if patient_index is None:
             return
         
@@ -270,6 +298,36 @@ class Controller(QtWidgets.QWidget):
         if bbox is None:
             return
         bbox.set_nodule_index(nodule_index)
+    
+    def box_info_type_changed(self, type:str):
+        patietn_intex = self.patient_manager.get_current_index()
+        if patietn_intex is None:
+            return
+
+        patient = self.patient_manager.get_patient(patietn_intex)
+        if patient is None:
+            return
+        
+        cls_patient = self.Cls_manager.get_patient(self.patient_ids[patietn_intex])
+        box = patient.get_bbox(self.bbox_index)
+        if box is None:
+            return
+
+        if type == 'Match':
+            if cls_patient is None:
+                return
+            self.bbox_info_display.add_box_items(cls_patient.get_nodule_count(), type='nodule', index=box.get_nodule_index())
+        elif type == 'Combine':
+            if patient is None:
+                return
+            self.bbox_info_display.add_box_items(patient.get_box_count(), type='bbox', index=box.get_box_group())
+        elif type == 'Delete':
+            print('Delete')
+        elif type == 'Other':
+            print('Other')
+        else:
+            print('error')
+            
     
 if __name__ == '__main__':
     import sys

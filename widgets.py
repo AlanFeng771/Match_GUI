@@ -1,3 +1,4 @@
+from itertools import count
 from PyQt5 import QtCore, QtGui, QtWidgets 
 import numpy as np
 import cv2
@@ -684,6 +685,107 @@ class BboxesButtonListView(QtWidgets.QWidget):
 
     def update_bbox_noodule_index(self, index:int, nodule_index:int):
         self.bbox_buttons[index].set_nodule_index(nodule_index)
+
+class BboxTypeButton(QtWidgets.QPushButton):
+    bbox_type_button_clicked = QtCore.pyqtSignal(str)
+    def __init__(self, text:str, parent=None):
+        super(BboxTypeButton, self).__init__(parent)
+        self.setText(text)
+        self.setCheckable(True)
+        self.clicked.connect(lambda: self.bbox_type_button_clicked.emit(text))
+
+    def set_checked(self, checked:bool):
+        self.setChecked(checked)
+        
+class Box(QtWidgets.QComboBox):
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        # self.setFixedSize(QtCore.QSize(80, 20))
+        self.setMaxVisibleItems(9999)
+        
+    def add_item(self, nodule_index:int, type:str='nodule'):
+        if type == 'nodule':
+            self.addItem('nodule {}'.format(nodule_index))
+        elif type == 'bbox':
+            self.addItem('bbox {}'.format(nodule_index))
+        else:
+            self.addItem('{}'.format(nodule_index))
+        self.update()
+    
+    def add_items(self, nodule_count:int, type:str='nodule'):
+        self.clear()
+        for nodule_index in range(nodule_count):
+            self.add_item(nodule_index, type=type)
+    
+    def set_item_index(self, index:int):
+        self.setCurrentIndex(index)
+    
+    def box_item_clear(self):
+        self.clear()
+        
+class BboxTypeButtons(QtWidgets.QWidget):
+    bbox_type_button_clicked = QtCore.pyqtSignal(str)
+    def __init__(self, parent=None):
+        super(BboxTypeButtons, self).__init__(parent)
+        self.button_texts = ['Match', 'Combine', 'Delete', 'Other']
+        self.buttons = [BboxTypeButton(text) for text in self.button_texts]
+        
+        button_layout = QtWidgets.QHBoxLayout(self)
+        for button in self.buttons:
+            button.bbox_type_button_clicked.connect(self.bbox_type_button_clicked_func)
+            button_layout.addWidget(button)
+    
+    def bbox_type_button_clicked_func(self, text:str):
+        for button, t in zip(self.buttons, self.button_texts):
+            if t == text:
+                button.set_checked(True)
+            else:
+                button.set_checked(False)
+        self.bbox_type_button_clicked.emit(text)
+    
+    def empty(self):
+        for button in self.buttons:
+            button.set_checked(False)
+    
+    def set_button_index(self, index:int):
+        self.empty()
+        if index != -1 and index < len(self.buttons):
+            self.buttons[index].set_checked(True)
+            
+            
+        
+class BboxInfoWidget(QtWidgets.QWidget):
+    bbox_type_button_clicked = QtCore.pyqtSignal(str)
+    def __init__(self):
+        super(BboxInfoWidget, self).__init__()
+        self.initWidget()
+    
+    def initWidget(self):
+        self.bbox_type_buttons = BboxTypeButtons()
+        self.box = Box()
+        self.bbox_type_buttons.bbox_type_button_clicked.connect(lambda text: self.bbox_type_button_clicked.emit(text))
+        info_layout = QtWidgets.QVBoxLayout(self)
+        info_layout.addWidget(self.bbox_type_buttons)
+        info_layout.addWidget(self.box)
+        
+    
+    def add_box_items(self, item_count:int, type:str='nodule', index:int=0):
+        self.box.add_items(item_count, type=type)
+        self.box.set_item_index(index)
+    
+    def rest_box(self, type_index:int, **kwargs):
+        if type_index == 0:
+            self.add_box_items(kwargs['nodule_count'], type='nodule')
+            self.box.set_item_index(kwargs['nodule_index'])
+        elif type_index == 1:
+            self.add_box_items(kwargs['bbox_count'], type='bbox')
+            self.box.set_item_index(kwargs['bbox_index'])
+        self.bbox_type_buttons.set_button_index(type_index)
+    
+    
+    
+
+            
 
 class NextNoduleButton(QtWidgets.QPushButton):
     next_nodule_clicked = QtCore.pyqtSignal()

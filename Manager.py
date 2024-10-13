@@ -5,10 +5,13 @@ import tools.tools as tools
 import os
 from typing import Union
 class Bbox:
-    def __init__(self, bbox):
+    def __init__(self, bbox, bbox_index:int):
         self.bbox = bbox
+        self.bbox_index = bbox_index
         self.category = None
         self.nodule_index = -1
+        self.type = 1
+        self.box_group = bbox_index
     
     def get_annotation(self):
         return self.bbox
@@ -19,6 +22,12 @@ class Bbox:
     def get_nodule_index(self):
         return self.nodule_index
     
+    def get_bbox_type(self):
+        return self.type
+    
+    def get_box_group(self):
+        return self.box_group
+    
     def set_node_index(self, nodule_index:int):
         self.nodule_index = nodule_index
     
@@ -27,7 +36,12 @@ class Bbox:
     
     def set_nodule_index(self, nodule_index):
         self.nodule_index = nodule_index
-        
+    
+    def set_type(self, bbox_type:int):
+        self.type = bbox_type
+    
+    def set_group(self, box_group:int):
+        self.box_group = box_group
 
 class Patient:
     def __init__(self, image_id:str):
@@ -49,7 +63,7 @@ class Patient:
             bboxe_list = json.load(json_file)['bboxes']
             
         for bbox_index, bbox_data in enumerate(bboxe_list):
-            bbox = Bbox(bbox_data)
+            bbox = Bbox(bbox_data, bbox_index=bbox_index)
             if bbox_index < len(match):
                 bbox.set_nodule_index(match[bbox_index])
             self.bboxes.append(bbox)
@@ -72,6 +86,9 @@ class Patient:
     def get_bboxes(self):
         return self.bboxes
 
+    def get_box_count(self):
+        return len(self.bboxes)
+    
     def get_bbox(self, bbox_index:int):
         if self.is_bbox_index_valid(bbox_index):
             return self.bboxes[bbox_index]

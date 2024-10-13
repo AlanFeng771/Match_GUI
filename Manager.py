@@ -12,6 +12,7 @@ class Bbox:
         self.nodule_index = -1
         self.type = 0
         self.box_group = bbox_index
+        self.is_checked = False
     
     def get_annotation(self):
         return self.bbox
@@ -27,6 +28,9 @@ class Bbox:
     
     def get_box_group(self):
         return self.box_group
+
+    def get_checked(self):
+        return self.is_checked
     
     def set_node_index(self, nodule_index:int):
         self.nodule_index = nodule_index
@@ -42,6 +46,9 @@ class Bbox:
     
     def set_group(self, box_group:int):
         self.box_group = box_group
+    
+    def set_checked(self, is_checked:bool):
+        self.is_checked = is_checked
 
 class Patient:
     def __init__(self, image_id:str):

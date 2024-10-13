@@ -115,6 +115,7 @@ class Controller(QtWidgets.QWidget):
         self.load_bbox_direction_button.load_annotation_direction_clicked.connect(self.load_bboxes_from_direction)
         self.Cls_button_list.Cls_button_clicked.connect(self.jump_to_nodule_start_slice)
         self.bbox_button_list.bbox_button_clicked.connect(self.bbox_index_changed)
+        self.bbox_button_list.bbox_check_box_clicked.connect(self.change_bbox_checked)
         # self.bbox_button_list.bbox_index_changed.connect(self.change_bbox_id_nodule_id)
         self.patient_index_controller.next_clicked.connect(self.next_patient)
         self.patient_index_controller.previous_clicked.connect(self.previous_patient)
@@ -297,6 +298,16 @@ class Controller(QtWidgets.QWidget):
         
     def output(self):
         self.patient_manager.output_match_table(r'match_table_temp.csv')
+    
+    def change_bbox_checked(self, is_checked:bool, bbox_id:int, patietn_id:str):
+        patient = self.patient_manager.get_patient_from_id(patietn_id)
+        if patient is None:
+            return
+        bbox = patient.get_bbox(bbox_id)
+        if bbox is None:
+            return
+        bbox.set_checked(is_checked)
+        
     
     def change_bbox_id_nodule_id(self, patient_id, bbox_index, nodule_index):
         patient = self.patient_manager.get_patient_from_id(patient_id)

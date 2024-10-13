@@ -578,32 +578,49 @@ class BboxNoduleBox(QtWidgets.QComboBox):
     
     def setPatientIndex(self, index:int):
         self.setCurrentIndex(index)
-        
+
+class BboxCheckBox(QtWidgets.QCheckBox):
+    bbox_check_box_clicked = QtCore.pyqtSignal(bool)
+    def __init__(self, parent=None):
+        super(BboxCheckBox, self).__init__(parent)
+        self.clicked.connect(lambda: self.bbox_check_box_clicked.emit(self.isChecked()))
+
 class BboxItem(QtWidgets.QWidget):
     bbox_button_clicked = QtCore.pyqtSignal(int)
-    bbox_index_changed = QtCore.pyqtSignal(int, int)
-    def __init__(self, text:str, index:int, nodule_count:int, nodule_index:int, parent=None):
+    bbox_check_box_clicked = QtCore.pyqtSignal(bool, int) # checked, bbox_index
+    # bbox_index_changed = QtCore.pyqtSignal(bool, int) 
+    def __init__(self, text:str, index:int, nodule_index:int, parent=None):
         super(BboxItem, self).__init__(parent)
         self.bbox_index = index
-        self.bbox = BboxButton(text, index, self)
-        self.nodule_box = BboxNoduleBox(nodule_count)
-        self.nodule_box.currentIndexChanged.connect(lambda nodule_index: self.bbox_index_changed.emit(self.bbox_index, nodule_index))
-        self.set_nodule_index(nodule_index)
+        self.bbox = BboxButton(text, index)
+        # self.nodule_box = BboxNoduleBox(nodule_count)
+        # self.nodule_box.currentIndexChanged.connect(lambda nodule_index: self.bbox_index_changed.emit(self.bbox_index, nodule_index))
+        self.check_box = BboxCheckBox()
+        
+        # self.set_nodule_index(nodule_index)
         self.bbox.clicked.connect(lambda: self.bbox_button_clicked.emit(index))
+        self.check_box.bbox_check_box_clicked.connect(lambda checked: self.bbox_check_box_clicked.emit(checked, self.bbox_index))
         
         layout = QtWidgets.QHBoxLayout(self)
-        layout.addWidget(self.bbox)
-        layout.addWidget(self.nodule_box)
+        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.check_box, 2)
+        layout.addWidget(self.bbox, 8)
+        # layout.addWidget(self.nodule_box)
     
     def set_checked(self, checked:bool):
         self.bbox.setChecked(checked)
     
-    def set_nodule_index(self, index:int):
-        self.nodule_box.setPatientIndex(index)
+    def set_checked_box(self, checked:bool):
+        self.check_box.setChecked(checked)
+    
+    # def set_nodule_index(self, index:int):
+    #     self.nodule_box.setPatientIndex(index)
           
 class BboxesButtonListView(QtWidgets.QWidget):
     bbox_button_clicked = QtCore.pyqtSignal(int)
-    bbox_index_changed = QtCore.pyqtSignal(str, int ,int)
+    bbox_check_box_clicked = QtCore.pyqtSignal(bool, int, str) # checked, bbox_index, patient_id
+    # bbox_index_changed = QtCore.pyqtSignal(str, int ,int)
     def __init__(self):
         super().__init__()
         self.setFixedSize(QtCore.QSize(250, 400))
@@ -633,11 +650,15 @@ class BboxesButtonListView(QtWidgets.QWidget):
         layout.addWidget(scroll_area)
 
     
-    def add_bbox(self, text:str, index:int, nodule_count:int, nodule_index:int):
-        # button = BboxItem(text, index, nodule_count, nodule_index, self)
-        button = BboxButton(text, index, self)
+    def add_bbox(self, text:str, index:int, is_checked:bool, nodule_index:int):
+        button = BboxItem(text, index, nodule_index, self)
+        # button = BboxButton(text, index, self)
+        
         # button.bbox_index_changed.connect(lambda bbox_index, nodule_index: self.bbox_index_changed.emit(self.patient_id, bbox_index, nodule_index))
         button.bbox_button_clicked.connect(self.bbox_clickd)
+        button.bbox_check_box_clicked.connect(lambda checked, bbox_index: self.bbox_check_box_clicked.emit(checked, bbox_index, self.patient_id))
+
+        button.set_checked_box(is_checked)
         self.bbox_buttons.append(button)
         self.button_layout.addRow(button)
     
@@ -647,7 +668,7 @@ class BboxesButtonListView(QtWidgets.QWidget):
         self.patient_id = patient.get_image_id()
         bboxes = patient.get_bboxes()
         for index, bbox in enumerate(bboxes):
-            self.add_bbox('Bbox {}, slice:{}'.format(index, bbox.get_start_slice()), index, patient_cls_element.get_nodule_count(), bbox.get_nodule_index())
+            self.add_bbox('Bbox {}, slice:{}'.format(index, bbox.get_start_slice()), index, bboxes[index].get_checked(), bbox.get_nodule_index())
     
     def clear_buttons(self):
         """清除當前所有按鈕"""
@@ -794,7 +815,6 @@ class BboxInfoWidget(QtWidgets.QWidget):
     def add_box_items(self, item_count:int, type:str='nodule', index:int=0):
         self.box.add_items(item_count, type=type)
         self.box.set_item_index(index)
-        
     
     def rest_box(self, box:Manager.Bbox):
         if box is not None:

@@ -3,6 +3,7 @@ import json
 import csv
 import tools.tools as tools
 import os
+from typing import Union
 class Bbox:
     def __init__(self, bbox):
         self.bbox = bbox
@@ -100,8 +101,8 @@ class PatientManager:
         self.current_bbox_index = None
         self.patients = {}
         self.match_table:dict = {}
-    
-    def get_patient(self, patient_index:int)->Patient:
+
+    def get_patient(self, patient_index: int) -> Union[Patient, None]:
         patient_ids = list(self.patients.keys())
         patient_id = patient_ids[patient_index]
         if patient_id in self.patients:
@@ -110,7 +111,7 @@ class PatientManager:
         else:
             return None
     
-    def get_patient_from_id(self, patient_id:str)->Patient:
+    def get_patient_from_id(self, patient_id:str)->Union[Patient, None]:
         if patient_id in self.patients:
             return self.patients[patient_id]
         else:
@@ -127,7 +128,8 @@ class PatientManager:
         else:
             
             patient = self.get_patient_from_id(patient_id)
-            patient.set_image_path(image_path)
+            if patient is not None:
+                patient.set_image_path(image_path)
         
     def add_bbox_from_file(self, patient_id:str, bbox_path:str):
         if patient_id not in self.patients:
@@ -136,6 +138,9 @@ class PatientManager:
         else:
             patient = self.get_patient_from_id(patient_id)
             # patient.set_bbox_path(bbox_path)
+        
+        if patient is None:
+            return
         
         if patient_id in self.match_table:
             patient.set_bbox(bbox_path, self.match_table[patient_id])
@@ -239,7 +244,7 @@ class ClsManager:
         self.patient_cls_elements = {}
         self.mask_root = None
     
-    def get_patient(self, patient_id:str)->PatientClsElement:
+    def get_patient(self, patient_id:str)->Union[PatientClsElement, None]:
         if patient_id in self.patient_cls_elements:
             return self.patient_cls_elements[patient_id]
         else:

@@ -1,11 +1,10 @@
-import re
 from PyQt5 import QtCore, QtGui, QtWidgets 
 import numpy as np
 import cv2
-import json
 import Manager
 class PhotoViewer(QtWidgets.QGraphicsView):
     photoClicked = QtCore.pyqtSignal(QtCore.QPoint)
+    
     def __init__(self, parent):
         super(PhotoViewer, self).__init__(parent)
         self._zoom = 0
@@ -17,22 +16,26 @@ class PhotoViewer(QtWidgets.QGraphicsView):
         self.setScene(self._scene)
         self.setTransformationAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
-        self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 30, 30)))
         self.setFrameShape(QtWidgets.QFrame.NoFrame)
 
     def hasPhoto(self):
         return not self._empty
 
-    def fitInView(self, scale=True):
+    def fit_in_view(self):
         rect = QtCore.QRectF(self._photo.pixmap().rect())
         if not rect.isNull():
             self.setSceneRect(rect)
             if self.hasPhoto():
                 unity = self.transform().mapRect(QtCore.QRectF(0, 0, 1, 1))
                 self.scale(1 / unity.width(), 1 / unity.height())
-                viewrect = self.viewport().rect()
+                viewport = self.viewport()
+                if viewport is not None:
+                    viewrect = viewport.rect()
+                else:
+                    viewrect = QtCore.QRect()
                 scenerect = self.transform().mapRect(rect)
                 factor = min(viewrect.width() / scenerect.width(),
                              viewrect.height() / scenerect.height())
@@ -45,7 +48,7 @@ class PhotoViewer(QtWidgets.QGraphicsView):
             self._empty = False
             self.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
             self._photo.setPixmap(pixmap)
-            self._photo.setTransformationMode(QtCore.Qt.SmoothTransformation)
+            self._photo.setTransformationMode(QtCore.Qt.TransformationMode.SmoothTransformation)
             if contour_item is not None:
                 if self.current_contour_item is not None:
                     self._scene.removeItem(self.current_contour_item)
@@ -63,9 +66,11 @@ class PhotoViewer(QtWidgets.QGraphicsView):
         self._scene.removeItem(item)
       
     def wheelEvent(self, event):
+        if event is None:
+            return
         modifiers = event.modifiers()
         if self.hasPhoto():
-            if modifiers == QtCore.Qt.ControlModifier:
+            if modifiers == QtCore.Qt.KeyboardModifier.ControlModifier:
                 if event.angleDelta().y() > 0:
                     factor = 1.25
                     self._zoom += 1
@@ -75,7 +80,7 @@ class PhotoViewer(QtWidgets.QGraphicsView):
                 if self._zoom > 0:
                     self.scale(factor, factor)
                 elif self._zoom == 0:
-                    self.fitInView()
+                    self.fit_in_view()
                 else:
                     self._zoom = 0
 
@@ -85,11 +90,15 @@ class PhotoViewer(QtWidgets.QGraphicsView):
         elif not self._photo.pixmap().isNull():
             self.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
 
-    def mousePressEvent(self, event):
-        if self._photo.isUnderMouse():
-            self.photoClicked.emit(self.mapToScene(event.pos()).toPoint())
-        super(PhotoViewer, self).mousePressEvent(event)
-
+    # def mousePressEvent(self, event):
+    #     if self._photo.isUnderMouse():
+    #         if event is None:
+    #             return
+    #         point = self.mapToScene(event.pos().toPoint())
+    #         if point is None:
+    #             return
+    #         self.photoClicked.emit(point.toPoint())
+    #     super(PhotoViewer, self).mousePressEvent(event)
 
 class PlayerView(QtWidgets.QWidget):
     def __init__(self):
@@ -98,7 +107,7 @@ class PlayerView(QtWidgets.QWidget):
         self.contour_images = None
         self.setFixedSize(QtCore.QSize(512, 512))
         self.initWidget()
-
+        
     def initWidget(self):
         label_font = QtGui.QFont()
         label_font.setFamily('Verdana')
@@ -108,7 +117,7 @@ class PlayerView(QtWidgets.QWidget):
         self.viewer = PhotoViewer(self)
 
         # Scroll bar
-        self.scrollBar = QtWidgets.QScrollBar(QtCore.Qt.Horizontal)
+        self.scrollBar = QtWidgets.QScrollBar(QtCore.Qt.Orientation.Horizontal)
         self.scrollBar.setMinimum(0)
         self.scrollBar.setMaximum(0)  # 初始設置為0，因為還沒有圖片加載
         self.scrollBar.valueChanged.connect(self.show)
@@ -141,7 +150,8 @@ class PlayerView(QtWidgets.QWidget):
     def _generate_contour_item(self, contour_image):
         height, width = contour_image.shape
         contour_pixmap = QtGui.QPixmap(width, height)
-        contour_pixmap.fill(QtCore.Qt.transparent)
+        transparent_color = QtGui.QColor(0, 0, 0, 0)
+        contour_pixmap.fill(transparent_color)
         painter = QtGui.QPainter(contour_pixmap)
         for y in range(height):
             for x in range(width):
@@ -168,7 +178,7 @@ class PlayerView(QtWidgets.QWidget):
             contour_item = None
         if self.images is not None: 
             self.viewer.setPhoto(self._numpytoPixmap(self.images[:,:,image_index]), contour_item)
-            # self.viewer.fitInView()
+            # self.viewer.fit_in_view()
         self.image_index = image_index
     
     
@@ -196,7 +206,7 @@ class PlayerWithRectView(QtWidgets.QWidget):
         self.viewer = PhotoViewer(self)
 
         # Scroll bar
-        self.scrollBar = QtWidgets.QScrollBar(QtCore.Qt.Horizontal)
+        self.scrollBar = QtWidgets.QScrollBar(QtCore.Qt.Orientation.Horizontal)
         self.scrollBar.setMinimum(0)
         self.scrollBar.setMaximum(0)  # 初始設置為0，因為還沒有圖片加載
         self.scrollBar.valueChanged.connect(self.show)
@@ -262,7 +272,7 @@ class PlayerWithRectView(QtWidgets.QWidget):
     def reset_bbox_color(self):
         if len(self.rects) > 0:
             for rect in self.rects:
-                rect.setBorderColor(QtCore.Qt.red)
+                rect.setBorderColor(QtCore.Qt.GlobalColor.red)
     
     def show(self, image_index:int=0):
         self.sliceText.setText(str(image_index))
@@ -272,7 +282,7 @@ class PlayerWithRectView(QtWidgets.QWidget):
     def focus_bbox(self, index:int):
         self.reset_bbox_color()
         rect = self.rects[index]
-        rect.setBorderColor(QtCore.Qt.green)
+        rect.setBorderColor(QtCore.Qt.GlobalColor.green)
         print('focus bbox')
     
     def set_current_scrollbar_index(self, value:int):
@@ -310,8 +320,7 @@ class NextPatientButton(QtWidgets.QPushButton):
         super(NextPatientButton, self).__init__(parent)
         self.setText('Next')
         self.setFixedSize(QtCore.QSize(150, 50))
-
-        
+     
 class PreviousPatientButton(QtWidgets.QPushButton):
     def __init__(self, parent=None):
         super(PreviousPatientButton, self).__init__(parent)
@@ -332,7 +341,7 @@ class PatientControlWidget(QtWidgets.QWidget):
         self.previous_button = PreviousPatientButton()
         
         layout = QtWidgets.QHBoxLayout(self)
-        layout.setAlignment(QtCore.Qt.AlignTop)
+        layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.previous_button)
@@ -351,10 +360,9 @@ class PatientControlWidget(QtWidgets.QWidget):
     
     def clear(self):
         self.patient_index_box.clear()
-
-    
+ 
 class CustomRectItem(QtWidgets.QGraphicsItem):
-    def __init__(self, size:tuple, position:QtCore.QRectF, slices:list, border_color=QtCore.Qt.red, parent=None):
+    def __init__(self, size:tuple, position:QtCore.QRectF, slices:list, border_color=QtCore.Qt.GlobalColor.red, parent=None):
         '''
         size: (width, height)
         position: QPointF (center_x, center_y)
@@ -371,6 +379,8 @@ class CustomRectItem(QtWidgets.QGraphicsItem):
         return QtCore.QRectF(self.position.x()-self.size[0]/2, self.position.y()-self.size[1]/2, self.size[0], self.size[1])
 
     def paint(self, painter, option, widget=None):
+        if painter is None:
+            return
         painter.setPen(self.border_color)
         painter.drawRect(self.position.x()-self.size[0]/2, self.position.y()-self.size[1]/2, self.size[0], self.size[1])
 
@@ -503,6 +513,8 @@ class ButtonListWindow(QtWidgets.QWidget):
         """清除當前所有按鈕"""
         while self.button_layout.count():
             item = self.button_layout.takeAt(0)
+            if item is None:
+                return
             widget = item.widget()
             if widget is not None:
                 widget.deleteLater()
@@ -541,6 +553,9 @@ class BboxButton(QtWidgets.QPushButton):
         self.index = index
         self.setCheckable(True)
         self.clicked.connect(lambda: self.bbox_button_clicked.emit(self.index))
+    
+    def set_checked(self, checked:bool):
+        self.setChecked(checked)
 
 class BboxNoduleBox(QtWidgets.QComboBox):
     bbox_index_changed = QtCore.pyqtSignal(int)
@@ -583,8 +598,7 @@ class BboxItem(QtWidgets.QWidget):
     
     def set_nodule_index(self, index:int):
         self.nodule_box.setPatientIndex(index)
-        
-
+          
 class BboxesButtonListView(QtWidgets.QWidget):
     bbox_button_clicked = QtCore.pyqtSignal(int)
     bbox_index_changed = QtCore.pyqtSignal(str, int ,int)
@@ -618,8 +632,9 @@ class BboxesButtonListView(QtWidgets.QWidget):
 
     
     def add_bbox(self, text:str, index:int, nodule_count:int, nodule_index:int):
-        button = BboxItem(text, index, nodule_count, nodule_index, self)
-        button.bbox_index_changed.connect(lambda bbox_index, nodule_index: self.bbox_index_changed.emit(self.patient_id, bbox_index, nodule_index))
+        # button = BboxItem(text, index, nodule_count, nodule_index, self)
+        button = BboxButton(text, index, self)
+        # button.bbox_index_changed.connect(lambda bbox_index, nodule_index: self.bbox_index_changed.emit(self.patient_id, bbox_index, nodule_index))
         button.bbox_button_clicked.connect(self.bbox_clickd)
         self.bbox_buttons.append(button)
         self.button_layout.addRow(button)
@@ -636,9 +651,10 @@ class BboxesButtonListView(QtWidgets.QWidget):
         """清除當前所有按鈕"""
         while self.button_layout.count():
             item = self.button_layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.deleteLater()
+            if item is not None:
+                widget = item.widget()
+                if widget is not None:
+                    widget.deleteLater()
         
     def reset_buttons(self):
         for bbox in self.bbox_buttons:
@@ -668,9 +684,7 @@ class BboxesButtonListView(QtWidgets.QWidget):
 
     def update_bbox_noodule_index(self, index:int, nodule_index:int):
         self.bbox_buttons[index].set_nodule_index(nodule_index)
-    
-    
-    
+
 class NextNoduleButton(QtWidgets.QPushButton):
     next_nodule_clicked = QtCore.pyqtSignal()
     def __init__(self, parent=None):

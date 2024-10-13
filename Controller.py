@@ -1,10 +1,7 @@
-from json import load
-from tkinter import N
-from turtle import right
+import re
 from PyQt5.QtCore import Qt
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QKeySequence
-from numpy import short
 import widgets
 import Manager
 import os
@@ -50,7 +47,6 @@ class Controller(QtWidgets.QWidget):
         
         # main layout
         HBlayout = QtWidgets.QHBoxLayout(self)
-        
 
         # nodule layout
         nodule_VBlayout = QtWidgets.QVBoxLayout()
@@ -98,9 +94,9 @@ class Controller(QtWidgets.QWidget):
         # shortcuts
         a_shortcut = QtWidgets.QShortcut(QKeySequence('a'), self)
         d_shortcut = QtWidgets.QShortcut(QKeySequence('d'), self)
-        left_shortcut = QtWidgets.QShortcut(QKeySequence(Qt.Key_Left), self)
-        right_shortcut = QtWidgets.QShortcut(QKeySequence(Qt.Key_Right), self)
-        space_shortcut = QtWidgets.QShortcut(QKeySequence(Qt.Key_Space), self)
+        left_shortcut = QtWidgets.QShortcut(QKeySequence(Qt.Key.Key_Left), self)
+        right_shortcut = QtWidgets.QShortcut(QKeySequence(Qt.Key.Key_Right), self)
+        space_shortcut = QtWidgets.QShortcut(QKeySequence(Qt.Key.Key_Space), self)
         
         a_shortcut.activated.connect(self.previous_nodule)
         d_shortcut.activated.connect(self.next_nodule)
@@ -256,6 +252,8 @@ class Controller(QtWidgets.QWidget):
         if patient_index is None:
             return
         patient = self.patient_manager.get_patient(patient_index)
+        if patient is None:
+            return
         bbox = patient.get_bbox(self.bbox_index)
         
         if bbox is None:

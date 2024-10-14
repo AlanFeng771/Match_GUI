@@ -694,18 +694,19 @@ class BboxesButtonListView(QtWidgets.QWidget):
 
         button.set_checked_box(is_checked)
         self.bbox_buttons.append(button)
+        self.button_layout.addRow(button)
     
     def add_bboxes(self, patient:Manager.Patient, patient_cls_element:Manager.PatientClsElement):
         del self.bbox_buttons
         self.bbox_buttons = []
         self.patient_id = patient.get_image_id()
-        bboxes = patient.get_bboxes()
+        bboxes = patient.get_sorted_bboxes()
         for index, bbox in enumerate(bboxes):
-            self.add_bbox('Bbox {}, slice:{}'.format(index, bbox.get_start_slice()), bbox.get_start_slice(), index, bboxes[index].get_checked(), bbox.get_nodule_index())
+            self.add_bbox('Bbox {}, slice:{}'.format(patient.get_bbox_index(index), bbox.get_start_slice()), bbox.get_start_slice(), index, bboxes[index].get_checked(), bbox.get_nodule_index())
         
         # self.bbox_buttons = sorted(self.bbox_buttons, key=lambda x: x.get_start_slice())
-        for box_button in self.bbox_buttons:
-            self.button_layout.addRow(box_button)
+        # for box_button in self.bbox_buttons:
+        #     self.button_layout.addRow(box_button)
     
     def clear_buttons(self):
         """清除當前所有按鈕"""

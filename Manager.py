@@ -34,6 +34,7 @@ class Bbox:
 
     def get_checked(self):
         return self.is_checked
+
     
     def set_node_index(self, nodule_index:int):
         self.nodule_index = nodule_index
@@ -56,33 +57,14 @@ class Bbox:
 class Patient:
     def __init__(self, image_id:str):
         self.bboxes = []
+        self.sorted_bboxes = []
+        self.sorted_indexs = []
         self.image_id = image_id
         self.bbox_path = None
         self.image_path = None
         self.bbox_index = 0
-        
-    # def _process_bboxes(self, match:list=[]):
-    #     self.bboxes = []
-    #     if self.bbox_path is None:
-    #         return
-
-    #     if os.path.exists(self.bbox_path) is False:
-    #         print('bbox file not found:', self.bbox_path)
-    #         return
-            
-    #     with open(self.bbox_path, 'r') as json_file:
-    #         bboxe_list = json.load(json_file)['bboxes']
-            
-    #     for bbox_index, bbox_data in enumerate(bboxe_list):
-    #         bbox = Bbox(bbox_data, bbox_index=bbox_index)
-    #         if bbox_index < len(match):
-    #             bbox.set_nodule_index(match[bbox_index])
-    #         self.bboxes.append(bbox)
     
     def set_bbox(self, bbox_info:list):
-        # self.bboxes = []
-            
-        # for bbox_index, bbox_info in enumerate(bbox_list):
         bbox_data = bbox_info[:6] # cnetroid_x, centroid_y, centroid_z, width, height, depth
         bbox_type = bbox_info[6]
         releated_index = bbox_info[7]
@@ -96,16 +78,13 @@ class Patient:
             bbox.set_group(releated_index)
         bbox.set_checked(is_checked)
         self.bboxes.append(bbox)
-    
-    
-    # def set_bbox_path(self, bbox_path:str):
-    #     self.bbox_path = bbox_path
-    #     self._process_bboxes()
-    
-    # def set_bbox(self, bbox_path:str, match:list=[]):
-    #     self.bbox_path = bbox_path
-    #     self._process_bboxes(match)
-    
+        
+        start_slices = [bbox.get_start_slice() for bbox in self.bboxes]
+        self.sorted_bboxes = sorted(self.bboxes, key=lambda bbox: bbox.get_start_slice()) 
+        self.sorted_indexs = sorted((start_slice, bbox_index) for bbox_index, start_slice in enumerate(start_slices))
+        self.sorted_indexs = [sorted_index[1] for sorted_index in self.sorted_indexs]
+        print(self.sorted_indexs)
+
     def set_image_path(self, image_path:str):
         self.image_path = image_path
     
@@ -121,7 +100,7 @@ class Patient:
     
     def get_bbox(self, bbox_index:int):
         if self.is_bbox_index_valid(bbox_index):
-            return self.bboxes[bbox_index]
+            return self.sorted_bboxes[bbox_index]
         else:
             return None
 
@@ -141,6 +120,18 @@ class Patient:
             return True
     def get_image_id(self):
         return self.image_id
+    
+    def get_bbox_index(self, indx)->int:
+        return self.sorted_indexs[indx]
+    
+    def get_sorted_bboxes(self):
+        return self.sorted_bboxes
+    
+    # def get_bbox(self, indx):
+    #     if indx < 0 or indx >= len(self.sorted_bboxes):
+    #         return None
+    #     return self.sorted_bboxes[indx]
+    
 
 class PatientManager:
     def __init__(self):
@@ -178,32 +169,12 @@ class PatientManager:
             if patient is not None:
                 patient.set_image_path(image_path)
         
-    # def add_bbox_from_file(self, patient_id:str, bbox_path:str):
-    #     if patient_id not in self.patients:
-    #         patient = Patient(patient_id)
-    #         self._add_patient(patient)
-    #     else:
-    #         patient = self.get_patient_from_id(patient_id)
-    #         # patient.set_bbox_path(bbox_path)
-        
-    #     if patient is None:
-    #         return
-        
-    #     if patient_id in self.match_table:
-    #         patient.set_bbox(bbox_path, self.match_table[patient_id])
-    #     else:
-    #         patient.set_bbox(bbox_path)
-        
     def add_images_from_direction(self, patient_ids:list, image_paths:list):
         if len(patient_ids)>0:
             self.current_patient_index = 0
             
         for patient_id, image_path in zip(patient_ids, image_paths):
             self.add_image_from_file(patient_id, image_path)
-    
-    # def add_bboxes_from_direction(self, patient_ids:list, bbox_paths:list):
-    #     for patient_id, bbox_path in zip(patient_ids, bbox_paths):
-    #         self.add_bbox_from_file(patient_id, bbox_path)
         
     def get_current_index(self):
         return self.current_patient_index
@@ -263,12 +234,18 @@ class PatientManager:
     def output_match_table(self, match_table_file:str):
         with open(match_table_file, 'w', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow(['patient_id', 'bbox_id', 'nodule_id'])
+            writer.writerow(['patient_id','center_x','center_y','center_z','width','height','depth','type','index','is_checked'])
             for patient_id, patient in self.patients.items():
                 bbox = patient.get_bboxes()
                 for bbox_index, bbox_data in enumerate(bbox):
-                    writer.writerow([patient_id, bbox_index, bbox_data.get_nodule_index()])
-    
+                    if bbox_data.get_checked():
+                        if bbox_data.get_bbox_type() == 0:
+                            writer.writerow([patient_id, bbox_data.bbox[0], bbox_data.bbox[1], bbox_data.bbox[2], bbox_data.bbox[3], bbox_data.bbox[4], bbox_data.bbox[5], bbox_data.get_bbox_type(), bbox_data.get_nodule_index(), bbox_data.get_checked()])
+                        elif bbox_data.get_bbox_type() == 1:
+                            writer.writerow([patient_id, bbox_data.bbox[0], bbox_data.bbox[1], bbox_data.bbox[2], bbox_data.bbox[3], bbox_data.bbox[4], bbox_data.bbox[5], bbox_data.get_bbox_type(), bbox_data.get_box_group(), bbox_data.get_checked()])
+                        else:
+                            writer.writerow([patient_id, bbox_data.bbox[0], bbox_data.bbox[1], bbox_data.bbox[2], bbox_data.bbox[3], bbox_data.bbox[4], bbox_data.bbox[5], bbox_data.get_bbox_type(), -1, bbox_data.get_checked()])
+        
 class ClsElement:
     def __init__(self, start_slice:int, category:int):
         self.start_slice = start_slice
@@ -291,14 +268,14 @@ class PatientClsElement:
     def __init__(self, patient_id:str):
         self.patient_id = patient_id
         self.cls_elements = []
-        self.sort_cls_elements = []
+        self.sorted_cls_elements = []
         self.sorted_index = []
         self.mask_path = None
     
     def add_element(self, start_slice:int, category:int):
         self.cls_elements.append(ClsElement(start_slice, category))
         start_slices = [cls_element.get_start_slice() for cls_element in self.cls_elements]
-        self.sort_cls_elements = sorted(self.cls_elements, key=lambda cls_element: cls_element.get_start_slice()) 
+        self.sorted_cls_elements = sorted(self.cls_elements, key=lambda cls_element: cls_element.get_start_slice()) 
         self.sorted_index = sorted((start_slice, bbox_index) for bbox_index, start_slice in enumerate(start_slices))
         self.sorted_index = [sorted_index[1] for sorted_index in self.sorted_index]
     
@@ -309,10 +286,10 @@ class PatientClsElement:
         return self.cls_elements
 
     def get_sorted_elements(self):
-        return self.sort_cls_elements
+        return self.sorted_cls_elements
     
     def get_element(self, element_index):
-        return self.sort_cls_elements[element_index]
+        return self.sorted_cls_elements[element_index]
 
     def get_nodule_index(self, indx):
         return self.sorted_index[indx]

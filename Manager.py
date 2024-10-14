@@ -233,12 +233,19 @@ class ClsElement:
     def __init__(self, start_slice:int, category:int):
         self.start_slice = start_slice
         self.category = category
+        self.is_checked = False
         
     def get_start_slice(self):
         return self.start_slice
     
     def get_category(self):
         return self.category
+
+    def get_checked(self):
+        return self.is_checked
+    
+    def set_checked(self, is_checked:bool):
+        self.is_checked = is_checked    
 
 class PatientClsElement:
     def __init__(self, patient_id:str):

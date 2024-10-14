@@ -114,6 +114,7 @@ class Controller(QtWidgets.QWidget):
         self.load_image_direction_button.load_image_direction_clicked.connect(self.load_images_from_direction)
         self.load_bbox_direction_button.load_annotation_direction_clicked.connect(self.load_bboxes_from_direction)
         self.Cls_button_list.Cls_button_clicked.connect(self.jump_to_nodule_start_slice)
+        self.Cls_button_list.Cls_check_box_clicked.connect(self.change_cls_checked)
         self.bbox_button_list.bbox_button_clicked.connect(self.bbox_index_changed)
         self.bbox_button_list.bbox_check_box_clicked.connect(self.change_bbox_checked)
         # self.bbox_button_list.bbox_index_changed.connect(self.change_bbox_id_nodule_id)
@@ -215,7 +216,7 @@ class Controller(QtWidgets.QWidget):
         
         self.cls_index = 0
         self.Cls_button_list.clear_buttons()
-        self.Cls_button_list.add_buttions(cls_patient)
+        self.Cls_button_list.add_buttions(self.patient_ids[patient_index], cls_patient)
         
         self.bbox_index = 0
         self.reset_info()
@@ -307,7 +308,13 @@ class Controller(QtWidgets.QWidget):
         if bbox is None:
             return
         bbox.set_checked(is_checked)
-        
+    
+    def change_cls_checked(self, is_checked:bool, cls_index:int, patient_id:str):
+        cls_patient = self.Cls_manager.get_patient(patient_id)
+        if cls_patient is None:
+            return
+        cls_element = cls_patient.get_elements()[cls_index]
+        cls_element.set_checked(is_checked)
     
     def change_bbox_id_nodule_id(self, patient_id, bbox_index, nodule_index):
         patient = self.patient_manager.get_patient_from_id(patient_id)

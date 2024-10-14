@@ -1,4 +1,5 @@
 from itertools import count
+from operator import is_
 from re import M
 from PyQt5 import QtCore, QtGui, QtWidgets 
 import numpy as np
@@ -469,10 +470,47 @@ class ClsButton(QtWidgets.QPushButton):
     def set_checked(self, checked:bool):
         self.setChecked(checked)
 
+class ClsBboxCheckBox(QtWidgets.QCheckBox):
+    bbox_check_box_clicked = QtCore.pyqtSignal(bool)
+    def __init__(self, parent=None):
+        super(ClsBboxCheckBox, self).__init__(parent)
+        self.clicked.connect(lambda: self.bbox_check_box_clicked.emit(self.isChecked()))
+        
+class ClsBboxItem(QtWidgets.QWidget):
+    Cls_button_clicked = QtCore.pyqtSignal(int)
+    Cls_check_box_clicked = QtCore.pyqtSignal(bool, int) # checked, bbox_index
+    # bbox_index_changed = QtCore.pyqtSignal(bool, int) 
+    def __init__(self, text:str, index:int, nodule_index:int, parent=None):
+        super(ClsBboxItem, self).__init__(parent)
+        self.bbox_index = index
+        self.bbox = ClsButton(text, index)
+        # self.nodule_box = BboxNoduleBox(nodule_count)
+        # self.nodule_box.currentIndexChanged.connect(lambda nodule_index: self.bbox_index_changed.emit(self.bbox_index, nodule_index))
+        self.check_box = ClsBboxCheckBox()
+        
+        # self.set_nodule_index(nodule_index)
+        self.bbox.clicked.connect(lambda: self.Cls_button_clicked.emit(index))
+        self.check_box.bbox_check_box_clicked.connect(lambda checked: self.Cls_check_box_clicked.emit(checked, self.bbox_index))
+        
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.check_box, 2)
+        layout.addWidget(self.bbox, 8)
+        # layout.addWidget(self.nodule_box)
+    
+    def set_checked(self, checked:bool):
+        self.bbox.setChecked(checked)
+    
+    def set_checked_box(self, checked:bool):
+        self.check_box.setChecked(checked)
+
 class ButtonListWindow(QtWidgets.QWidget):
     Cls_button_clicked = QtCore.pyqtSignal(int)
+    Cls_check_box_clicked = QtCore.pyqtSignal(bool, int, str) # checked, bbox_index, patient_id
     def __init__(self):
         super().__init__()
+        self.patient_id = ''
         self.setFixedSize(QtCore.QSize(250, 400))
         self.Cls_buttons = []
         self.initWidget()
@@ -498,18 +536,22 @@ class ButtonListWindow(QtWidgets.QWidget):
         layout.addWidget(scroll_area)
 
     
-    def add_button(self, text:str, index:int):
-        button = ClsButton(text, index, self)
+    def add_button(self, text:str, index:int, is_checked:bool):
+        # button = ClsButton(text, index, self)
+        button = ClsBboxItem(text, index, 0, self)
         button.Cls_button_clicked.connect(self.cls_button_clicked)
+        button.Cls_check_box_clicked.connect(lambda checked, bbox_index: self.Cls_check_box_clicked.emit(checked, bbox_index, self.patient_id))
+        button.set_checked_box(is_checked)
         self.Cls_buttons.append(button)
         self.button_layout.addRow(button)
-    
-    def add_buttions(self, patient:Manager.PatientClsElement):
+            
+    def add_buttions(self, patient_id:str, patient_cls_element:Manager.PatientClsElement):
         del self.Cls_buttons
         self.Cls_buttons = []
-        cls_elements = patient.get_elements()  
+        cls_elements = patient_cls_element.get_elements()
+        self.patient_id = patient_id
         for index, cls_element in enumerate(cls_elements):
-            self.add_button('Nodule {},slice:{}, cls:{}'.format(index, cls_element.get_start_slice(), cls_element.get_category()), index)
+            self.add_button('Nodule {},slice:{}, cls:{}'.format(index, cls_element.get_start_slice(), cls_element.get_category()), index, cls_elements[index].get_checked())
     
     def clear_buttons(self):
         """清除當前所有按鈕"""

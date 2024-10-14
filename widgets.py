@@ -1,6 +1,7 @@
 from itertools import count
 from operator import is_
 from re import M
+from tracemalloc import start
 from PyQt5 import QtCore, QtGui, QtWidgets 
 import numpy as np
 import cv2
@@ -476,9 +477,10 @@ class ClsBboxItem(QtWidgets.QWidget):
     Cls_button_clicked = QtCore.pyqtSignal(int)
     Cls_check_box_clicked = QtCore.pyqtSignal(bool, int) # checked, bbox_index
 
-    def __init__(self, text:str, index:int, nodule_index:int, parent=None):
+    def __init__(self, text:str, index:int, start_slice:int, nodule_index:int, parent=None):
         super(ClsBboxItem, self).__init__(parent)
         self.bbox_index = index
+        self.start_slice = start_slice
         self.bbox = ClsButton(text, index)
 
         self.check_box = ClsBboxCheckBox()
@@ -497,6 +499,9 @@ class ClsBboxItem(QtWidgets.QWidget):
     
     def set_checked_box(self, checked:bool):
         self.check_box.setChecked(checked)
+    
+    def get_start_slice(self):
+        return self.start_slice
 
 class ButtonListWindow(QtWidgets.QWidget):
     Cls_button_clicked = QtCore.pyqtSignal(int)
@@ -529,21 +534,23 @@ class ButtonListWindow(QtWidgets.QWidget):
         layout.addWidget(scroll_area)
 
     
-    def add_button(self, text:str, index:int, is_checked:bool):
-        button = ClsBboxItem(text, index, 0, self)
+    def add_button(self, text:str, start_slice:int, index:int, is_checked:bool):
+        start_slice = start_slice
+        button = ClsBboxItem(text, index, start_slice, 0, self)
         button.Cls_button_clicked.connect(self.cls_button_clicked)
         button.Cls_check_box_clicked.connect(lambda checked, bbox_index: self.Cls_check_box_clicked.emit(checked, bbox_index, self.patient_id))
         button.set_checked_box(is_checked)
         self.Cls_buttons.append(button)
         self.button_layout.addRow(button)
-            
+        
+    
     def add_buttions(self, patient_id:str, patient_cls_element:Manager.PatientClsElement):
         del self.Cls_buttons
         self.Cls_buttons = []
-        cls_elements = patient_cls_element.get_elements()
+        cls_elements = patient_cls_element.get_sorted_elements()
         self.patient_id = patient_id
         for index, cls_element in enumerate(cls_elements):
-            self.add_button('Nodule {},slice:{}, cls:{}'.format(index, cls_element.get_start_slice(), cls_element.get_category()), index, cls_elements[index].get_checked())
+            self.add_button('Nodule {},slice:{}, cls:{}'.format(patient_cls_element.get_nodule_index(index), cls_element.get_start_slice(), cls_element.get_category()), cls_element.get_start_slice(), index, cls_elements[index].get_checked())
     
     def clear_buttons(self):
         """清除當前所有按鈕"""
@@ -622,9 +629,10 @@ class BboxCheckBox(QtWidgets.QCheckBox):
 class BboxItem(QtWidgets.QWidget):
     bbox_button_clicked = QtCore.pyqtSignal(int)
     bbox_check_box_clicked = QtCore.pyqtSignal(bool, int) # checked, bbox_index
-    def __init__(self, text:str, index:int, nodule_index:int, parent=None):
+    def __init__(self, text:str, start_slice:int, index:int, nodule_index:int, parent=None):
         super(BboxItem, self).__init__(parent)
         self.bbox_index = index
+        self.start_slice = start_slice
         self.bbox = BboxButton(text, index)
         self.check_box = BboxCheckBox()
         
@@ -644,7 +652,9 @@ class BboxItem(QtWidgets.QWidget):
     def set_checked_box(self, checked:bool):
         self.check_box.setChecked(checked)
     
-          
+    def get_start_slice(self):
+        return self.start_slice
+            
 class BboxesButtonListView(QtWidgets.QWidget):
     bbox_button_clicked = QtCore.pyqtSignal(int)
     bbox_check_box_clicked = QtCore.pyqtSignal(bool, int, str) # checked, bbox_index, patient_id
@@ -677,24 +687,25 @@ class BboxesButtonListView(QtWidgets.QWidget):
         layout.addWidget(scroll_area)
 
     
-    def add_bbox(self, text:str, index:int, is_checked:bool, nodule_index:int):
-        button = BboxItem(text, index, nodule_index, self)
+    def add_bbox(self, text:str, start_slice:int,  index:int, is_checked:bool, nodule_index:int):
+        button = BboxItem(text, start_slice, index, nodule_index, self)
         button.bbox_button_clicked.connect(self.bbox_clickd)
         button.bbox_check_box_clicked.connect(lambda checked, bbox_index: self.bbox_check_box_clicked.emit(checked, bbox_index, self.patient_id))
 
         button.set_checked_box(is_checked)
         self.bbox_buttons.append(button)
-        self.button_layout.addRow(button)
     
     def add_bboxes(self, patient:Manager.Patient, patient_cls_element:Manager.PatientClsElement):
         del self.bbox_buttons
         self.bbox_buttons = []
         self.patient_id = patient.get_image_id()
         bboxes = patient.get_bboxes()
-        print('bboxes:', bboxes)
         for index, bbox in enumerate(bboxes):
-            print(index)
-            self.add_bbox('Bbox {}, slice:{}'.format(index, bbox.get_start_slice()), index, bboxes[index].get_checked(), bbox.get_nodule_index())
+            self.add_bbox('Bbox {}, slice:{}'.format(index, bbox.get_start_slice()), bbox.get_start_slice(), index, bboxes[index].get_checked(), bbox.get_nodule_index())
+        
+        # self.bbox_buttons = sorted(self.bbox_buttons, key=lambda x: x.get_start_slice())
+        for box_button in self.bbox_buttons:
+            self.button_layout.addRow(box_button)
     
     def clear_buttons(self):
         """清除當前所有按鈕"""

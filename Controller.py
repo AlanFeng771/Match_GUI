@@ -161,7 +161,6 @@ class Controller(QtWidgets.QWidget):
         
         self.bbox_button_list.clear_buttons()
         self.bbox_button_list.add_bboxes(self.patient_manager.get_patient(patient_index), self.Cls_manager.get_patient(self.patient_ids[patient_index]))
-        print('in')
         is_valid = self.bbox_button_list.set_bbox_button_index(self.bbox_index)
         if is_valid:
             self.jump_to_nodule_bbox_start_slice(self.bbox_index)
@@ -206,6 +205,7 @@ class Controller(QtWidgets.QWidget):
         self.patient_manager.set_patient_index(index)
         patient = self.patient_manager.get_patient(index)
         cls_patient = self.Cls_manager.get_patient(self.patient_ids[index])
+        
         patient_index = self.patient_manager.get_current_index()
         
         if patient_index is None:
@@ -219,7 +219,7 @@ class Controller(QtWidgets.QWidget):
         self.cls_index = 0
         self.Cls_button_list.clear_buttons()
         self.Cls_button_list.add_buttions(self.patient_ids[patient_index], cls_patient)
-        
+        cls_index = cls_patient.get_bbox_index(self.cls_index)
         self.bbox_index = 0
         self.reset_info()
         self.bbox_button_list.clear_buttons()
@@ -229,8 +229,8 @@ class Controller(QtWidgets.QWidget):
         
         is_valid = self.Cls_button_list.set_cls_button_index(self.cls_index)
         if is_valid:
-            self.player.set_current_scrollbar_index(cls_patient.get_elements()[self.cls_index].get_start_slice())
-            self.display_label1.set_text(self.cls_index)
+            self.player.set_current_scrollbar_index(cls_patient.get_element(self.cls_index).get_start_slice())
+            self.display_label1.set_text(cls_index)
         
         self.player_with_bbox.reset_rects()
         self.player_with_bbox.load_image(patient)
@@ -247,9 +247,14 @@ class Controller(QtWidgets.QWidget):
         patient_index = self.patient_manager.get_current_index()
         if patient_index is None:
             return
-        image_index = self.Cls_manager.get_patient(self.patient_ids[patient_index]).get_elements()[nodule_index].get_start_slice()
+        
+        # image_index = self.Cls_manager.get_patient(self.patient_ids[patient_index]).get_elements()[nodule_index].get_start_slice()
+        cls_patient = self.Cls_manager.get_patient(self.patient_ids[patient_index])
+        if cls_patient is None:
+            return
+        image_index = cls_patient.get_element(nodule_index).get_start_slice()
         self.player.set_current_scrollbar_index(image_index)
-        self.display_label1.set_text(nodule_index)
+        self.display_label1.set_text(cls_patient.get_bbox_index(nodule_index))
     
     def jump_to_nodule_bbox_start_slice(self, nodule_index:int):
         self.bbox_index = nodule_index
@@ -286,18 +291,19 @@ class Controller(QtWidgets.QWidget):
         self.jump_to_nodule_bbox_start_slice(self.bbox_index)
         
     def confirm(self):
-        patient_index = self.patient_manager.get_current_index()
-        if patient_index is None:
-            return
-        patient = self.patient_manager.get_patient(patient_index)
-        if patient is None:
-            return
-        bbox = patient.get_bbox(self.bbox_index)
+        # patient_index = self.patient_manager.get_current_index()
+        # if patient_index is None:
+        #     return
+        # patient = self.patient_manager.get_patient(patient_index)
+        # if patient is None:
+        #     return
+        # bbox = patient.get_bbox(self.bbox_index)
         
-        if bbox is None:
-            return
-        bbox.set_nodule_index(self.cls_index)
-        self.bbox_button_list.update_bbox_noodule_index(self.bbox_index, self.cls_index)
+        # if bbox is None:
+        #     return
+        # bbox.set_nodule_index(self.cls_index)
+        # self.bbox_button_list.update_bbox_noodule_index(self.bbox_index, self.cls_index)
+        print('confirm')
         
     def output(self):
         self.patient_manager.output_match_table(r'match_table_temp.csv')
@@ -315,7 +321,7 @@ class Controller(QtWidgets.QWidget):
         cls_patient = self.Cls_manager.get_patient(patient_id)
         if cls_patient is None:
             return
-        cls_element = cls_patient.get_elements()[cls_index]
+        cls_element = cls_patient.get_element(cls_index)
         cls_element.set_checked(is_checked)
     
     def change_bbox_id_nodule_id(self, patient_id, bbox_index, nodule_index):
@@ -382,4 +388,3 @@ if __name__ == '__main__':
     controller.setGeometry(500, 300, 1200, 600)
     controller.showMaximized()
     sys.exit(app.exec_())
-        

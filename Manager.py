@@ -259,24 +259,6 @@ class PatientManager:
                 if patient is None:
                     return
                 patient.set_bbox(bbox_list)
-                
-    # def add_bbox(self, patient_id:str, bbox_list:list):
-    #     if patient_id not in self.patients:
-    #         patient = Patient(patient_id)
-    #         self._add_patient(patient)
-    #     else:
-    #         patient = self.get_patient_from_id(patient_id)
-    #         # patient.set_bbox_path(bbox_path)
-        
-    #     if patient is None:
-    #         return
-        
-    #     patient.set_bbox(bbox_list)
-    
-    # def add_bboxes(self, patient_ids:list, bbox_lists:list):
-    #     for patient_id, bbox_path in zip(patient_ids, bbox_lists):
-    #         self.add_bbox(patient_id, bbox_path)
-        
         
     def output_match_table(self, match_table_file:str):
         with open(match_table_file, 'w', newline='') as file:
@@ -309,13 +291,31 @@ class PatientClsElement:
     def __init__(self, patient_id:str):
         self.patient_id = patient_id
         self.cls_elements = []
+        self.sort_cls_elements = []
+        self.sorted_index = []
         self.mask_path = None
     
     def add_element(self, start_slice:int, category:int):
         self.cls_elements.append(ClsElement(start_slice, category))
+        start_slices = [cls_element.get_start_slice() for cls_element in self.cls_elements]
+        self.sort_cls_elements = sorted(self.cls_elements, key=lambda cls_element: cls_element.get_start_slice()) 
+        self.sorted_index = sorted((start_slice, bbox_index) for bbox_index, start_slice in enumerate(start_slices))
+        self.sorted_index = [sorted_index[1] for sorted_index in self.sorted_index]
+    
+    def get_bbox_index(self, indx)->int:
+        return self.sorted_index[indx]
     
     def get_elements(self):
         return self.cls_elements
+
+    def get_sorted_elements(self):
+        return self.sort_cls_elements
+    
+    def get_element(self, element_index):
+        return self.sort_cls_elements[element_index]
+
+    def get_nodule_index(self, indx):
+        return self.sorted_index[indx]
     
     def get_nodule_count(self):
         return len(self.cls_elements)

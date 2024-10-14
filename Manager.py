@@ -1,3 +1,6 @@
+from operator import index
+from tkinter import N
+from turtle import width
 import numpy as np
 import json
 import csv
@@ -5,8 +8,8 @@ import tools.tools as tools
 import os
 from typing import Union
 class Bbox:
-    def __init__(self, bbox, bbox_index:int):
-        self.bbox = bbox
+    def __init__(self, bbox:list, bbox_index:int):
+        self.bbox = bbox # centroid_x, centroid_y, centroid_z, width, height, depth
         self.bbox_index = bbox_index
         self.category = None
         self.nodule_index = -1
@@ -18,7 +21,7 @@ class Bbox:
         return self.bbox
     
     def get_start_slice(self):
-        return self.bbox[0][2]
+        return int(self.bbox[2] - self.bbox[5] // 2)
     
     def get_nodule_index(self):
         return self.nodule_index
@@ -56,32 +59,52 @@ class Patient:
         self.image_id = image_id
         self.bbox_path = None
         self.image_path = None
+        self.bbox_index = 0
         
-    def _process_bboxes(self, match:list=[]):
-        self.bboxes = []
-        if self.bbox_path is None:
-            return
+    # def _process_bboxes(self, match:list=[]):
+    #     self.bboxes = []
+    #     if self.bbox_path is None:
+    #         return
 
-        if os.path.exists(self.bbox_path) is False:
-            print('bbox file not found:', self.bbox_path)
-            return
+    #     if os.path.exists(self.bbox_path) is False:
+    #         print('bbox file not found:', self.bbox_path)
+    #         return
             
-        with open(self.bbox_path, 'r') as json_file:
-            bboxe_list = json.load(json_file)['bboxes']
+    #     with open(self.bbox_path, 'r') as json_file:
+    #         bboxe_list = json.load(json_file)['bboxes']
             
-        for bbox_index, bbox_data in enumerate(bboxe_list):
-            bbox = Bbox(bbox_data, bbox_index=bbox_index)
-            if bbox_index < len(match):
-                bbox.set_nodule_index(match[bbox_index])
-            self.bboxes.append(bbox)
+    #     for bbox_index, bbox_data in enumerate(bboxe_list):
+    #         bbox = Bbox(bbox_data, bbox_index=bbox_index)
+    #         if bbox_index < len(match):
+    #             bbox.set_nodule_index(match[bbox_index])
+    #         self.bboxes.append(bbox)
     
-    def set_bbox_path(self, bbox_path:str):
-        self.bbox_path = bbox_path
-        self._process_bboxes()
+    def set_bbox(self, bbox_info:list):
+        # self.bboxes = []
+            
+        # for bbox_index, bbox_info in enumerate(bbox_list):
+        bbox_data = bbox_info[:6] # cnetroid_x, centroid_y, centroid_z, width, height, depth
+        bbox_type = bbox_info[6]
+        releated_index = bbox_info[7]
+        is_checked = bbox_info[8]
+        bbox = Bbox(bbox_data, bbox_index=self.bbox_index)
+        self.bbox_index += 1
+        bbox.set_box_type(bbox_type)
+        if bbox_type == 0:
+            bbox.set_nodule_index(releated_index)
+        elif bbox_type == 1:
+            bbox.set_group(releated_index)
+        bbox.set_checked(is_checked)
+        self.bboxes.append(bbox)
     
-    def set_bbox(self, bbox_path:str, match:list=[]):
-        self.bbox_path = bbox_path
-        self._process_bboxes(match)
+    
+    # def set_bbox_path(self, bbox_path:str):
+    #     self.bbox_path = bbox_path
+    #     self._process_bboxes()
+    
+    # def set_bbox(self, bbox_path:str, match:list=[]):
+    #     self.bbox_path = bbox_path
+    #     self._process_bboxes(match)
     
     def set_image_path(self, image_path:str):
         self.image_path = image_path
@@ -155,21 +178,21 @@ class PatientManager:
             if patient is not None:
                 patient.set_image_path(image_path)
         
-    def add_bbox_from_file(self, patient_id:str, bbox_path:str):
-        if patient_id not in self.patients:
-            patient = Patient(patient_id)
-            self._add_patient(patient)
-        else:
-            patient = self.get_patient_from_id(patient_id)
-            # patient.set_bbox_path(bbox_path)
+    # def add_bbox_from_file(self, patient_id:str, bbox_path:str):
+    #     if patient_id not in self.patients:
+    #         patient = Patient(patient_id)
+    #         self._add_patient(patient)
+    #     else:
+    #         patient = self.get_patient_from_id(patient_id)
+    #         # patient.set_bbox_path(bbox_path)
         
-        if patient is None:
-            return
+    #     if patient is None:
+    #         return
         
-        if patient_id in self.match_table:
-            patient.set_bbox(bbox_path, self.match_table[patient_id])
-        else:
-            patient.set_bbox(bbox_path)
+    #     if patient_id in self.match_table:
+    #         patient.set_bbox(bbox_path, self.match_table[patient_id])
+    #     else:
+    #         patient.set_bbox(bbox_path)
         
     def add_images_from_direction(self, patient_ids:list, image_paths:list):
         if len(patient_ids)>0:
@@ -178,9 +201,9 @@ class PatientManager:
         for patient_id, image_path in zip(patient_ids, image_paths):
             self.add_image_from_file(patient_id, image_path)
     
-    def add_bboxes_from_direction(self, patient_ids:list, bbox_paths:list):
-        for patient_id, bbox_path in zip(patient_ids, bbox_paths):
-            self.add_bbox_from_file(patient_id, bbox_path)
+    # def add_bboxes_from_direction(self, patient_ids:list, bbox_paths:list):
+    #     for patient_id, bbox_path in zip(patient_ids, bbox_paths):
+    #         self.add_bbox_from_file(patient_id, bbox_path)
         
     def get_current_index(self):
         return self.current_patient_index
@@ -219,6 +242,41 @@ class PatientManager:
                     self.match_table[patient_id] = []
                 
                 self.match_table[patient_id].append(int(row['nodule_id']))
+    
+    def load_bboxes(self, bbox_annotaion_file:str):
+        with open(bbox_annotaion_file, 'r') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                patient_id = row['patient_id']
+                bbox_list = [float(row['center_x']), float(row['center_y']), float(row['center_z']), int(row['width']), int(row['height']), int(row['depth']), int(row['type']), int(row['index']), row['is_checked']=='True']
+                
+                if patient_id not in self.patients:
+                    patient = Patient(patient_id)
+                    self._add_patient(patient)
+                else:
+                    patient = self.get_patient_from_id(patient_id)
+                
+                if patient is None:
+                    return
+                patient.set_bbox(bbox_list)
+                
+    # def add_bbox(self, patient_id:str, bbox_list:list):
+    #     if patient_id not in self.patients:
+    #         patient = Patient(patient_id)
+    #         self._add_patient(patient)
+    #     else:
+    #         patient = self.get_patient_from_id(patient_id)
+    #         # patient.set_bbox_path(bbox_path)
+        
+    #     if patient is None:
+    #         return
+        
+    #     patient.set_bbox(bbox_list)
+    
+    # def add_bboxes(self, patient_ids:list, bbox_lists:list):
+    #     for patient_id, bbox_path in zip(patient_ids, bbox_lists):
+    #         self.add_bbox(patient_id, bbox_path)
+        
         
     def output_match_table(self, match_table_file:str):
         with open(match_table_file, 'w', newline='') as file:

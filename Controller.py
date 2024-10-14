@@ -16,7 +16,6 @@ class Controller(QtWidgets.QWidget):
         self.Cls_manager.set_mask_root(self.mask_root)
         self.Cls_manager.load_csv_file(self.annotation_file)
     
-        self.patient_manager.load_match_table(r'match_table_temp.csv')
         with open(r'patient_ids.txt', 'r') as f:
             patient_ids = f.readlines()
         self.patient_ids = [patient_id.strip() for patient_id in patient_ids]
@@ -44,7 +43,6 @@ class Controller(QtWidgets.QWidget):
         self.display_label2 = widgets.DisplayBBoxTable()
         self.output_button = widgets.OutputButton()
         self.bbox_info_display = widgets.BboxInfoWidget()
-        # self.button = QtWidgets.QPushButton('test')
         
         # main layout
         HBlayout = QtWidgets.QHBoxLayout(self)
@@ -95,7 +93,6 @@ class Controller(QtWidgets.QWidget):
         HBlayout.addLayout(nodule_VBlayout)
         HBlayout.addLayout(bbox_VBlayout)
         HBlayout.addLayout(control_VBlayout)
-        # HBlayout.addWidget(self.button)
         
         # shortcuts
         a_shortcut = QtWidgets.QShortcut(QKeySequence('a'), self)
@@ -117,7 +114,6 @@ class Controller(QtWidgets.QWidget):
         self.Cls_button_list.Cls_check_box_clicked.connect(self.change_cls_checked)
         self.bbox_button_list.bbox_button_clicked.connect(self.bbox_index_changed)
         self.bbox_button_list.bbox_check_box_clicked.connect(self.change_bbox_checked)
-        # self.bbox_button_list.bbox_index_changed.connect(self.change_bbox_id_nodule_id)
         self.patient_index_controller.next_clicked.connect(self.next_patient)
         self.patient_index_controller.previous_clicked.connect(self.previous_patient)
         self.patient_index_controller.patient_index_changed.connect(self.patient_index_changed)
@@ -129,17 +125,14 @@ class Controller(QtWidgets.QWidget):
         self.output_button.button_clicked.connect(self.output)
         self.bbox_info_display.bbox_type_button_clicked.connect(self.box_info_type_changed)
         self.bbox_info_display.bbox_index_changed.connect(self.change_bbox_info)
-        # self.button.clicked.connect(lambda:self.bbox_info_display.box.clear())
     
     def reset_info(self):
-        # print('reset info')
         patient = self.patient_manager.get_patient(self.patient_manager.get_current_index())
         if patient is None:
             return
         
         box = patient.get_bbox(self.bbox_index)
         if box is not None:
-            # print('box', self.patient_manager.get_current_index(), self.bbox_index)
             self.bbox_info_display.rest_box(box)
             
     
@@ -147,24 +140,33 @@ class Controller(QtWidgets.QWidget):
         self.jump_to_nodule_bbox_start_slice(box_index)
     
     def load_images_from_direction(self, direction_path):
-        # self.patient_ids = [path.split('/')[-1].split('.')[0] for path in os.listdir(direction_path)]
-        # if len(self.patient_ids) == 0:
-        #     return
-        
         image_paths = [f'{direction_path}/{patient_id}.npy' for patient_id in self.patient_ids]
         self.patient_manager.add_images_from_direction(self.patient_ids, image_paths)
-        
         patient_index = self.patient_manager.get_current_index()
         if patient_index is None:
             return
-        # self.player.load_image(self.patient_manager.get_patient(patient_index))
-        # self.player_with_bbox.load_image(self.patient_manager.get_patient(patient_index))
+
         self.Cls_button_list.clear_buttons()
-        
         self.patient_index_controller.clear()
         self.patient_index_controller.addPatients(self.patient_ids)
         self.load_bbox_direction_button.setEnabled(True)
         
+        # -----------------------
+        self.patient_manager.load_bboxes(r'match_table_test.csv')
+        patient_index = self.patient_manager.get_current_index()
+        if patient_index is None:
+            return
+        
+        self.player_with_bbox.load_bbox(self.patient_manager.get_patient(patient_index))
+        
+        self.bbox_button_list.clear_buttons()
+        self.bbox_button_list.add_bboxes(self.patient_manager.get_patient(patient_index), self.Cls_manager.get_patient(self.patient_ids[patient_index]))
+        print('in')
+        is_valid = self.bbox_button_list.set_bbox_button_index(self.bbox_index)
+        if is_valid:
+            self.jump_to_nodule_bbox_start_slice(self.bbox_index)
+            self.player_with_bbox.focus_bbox(self.bbox_index)
+            
     def load_bboxes_from_direction(self, direction_path):
         if len(self.patient_ids) == 0:
             return

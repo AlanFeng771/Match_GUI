@@ -39,7 +39,6 @@ class Controller(QtWidgets.QWidget):
         self.previous_nodule_button = widgets.PreviousNoduleButton()
         self.next_bbox_button = widgets.NextBboxButton()
         self.previous_bbox_button = widgets.PreviousBboxButton()
-        self.confirm_button = widgets.ConfirmButton()
         self.display_label1 = widgets.DisplayNoduleTable()
         self.display_label2 = widgets.DisplayBBoxTable()
         self.output_button = widgets.OutputButton()
@@ -84,9 +83,6 @@ class Controller(QtWidgets.QWidget):
         ## bbox info
         control_VBlayout.addWidget(self.bbox_info_display)
         
-        ## confirm
-        control_VBlayout.addWidget(self.confirm_button)
-        
         ## output
         control_VBlayout.addWidget(self.output_button)
         control_VBlayout.addWidget(QtWidgets.QWidget())
@@ -122,7 +118,6 @@ class Controller(QtWidgets.QWidget):
         self.previous_nodule_button.previous_nodule_clicked.connect(self.previous_nodule)
         self.next_bbox_button.next_bbox_clicked.connect(self.next_bbox)
         self.previous_bbox_button.previous_bbox_clicked.connect(self.previous_bbox)
-        self.confirm_button.confirm_clicked.connect(self.confirm)
         self.output_button.button_clicked.connect(self.output)
         self.bbox_info_display.bbox_type_button_clicked.connect(self.box_info_type_changed)
         self.bbox_info_display.bbox_index_changed.connect(self.change_bbox_info)

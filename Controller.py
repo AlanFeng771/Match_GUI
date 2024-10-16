@@ -143,7 +143,7 @@ class Controller(QtWidgets.QWidget):
     def load_images_from_direction(self, direction_path):
         image_paths = [f'{direction_path}/{patient_id}.npy' for patient_id in self.patient_ids]
         self.patient_manager.add_images_from_direction(self.patient_ids, image_paths)
-        self.patient_manager.load_bboxes(r'match_table_temp1.csv')
+        self.patient_manager.load_bboxes(r'match_table_test.csv')
         patient_index = self.patient_manager.get_current_index()
         if patient_index is None:
             return

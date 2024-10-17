@@ -1,4 +1,3 @@
-from email.mime import image
 from PyQt5.QtCore import Qt
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QKeySequence
@@ -13,14 +12,21 @@ class Controller(QtWidgets.QWidget):
         self.cls_index = 0
         self.bbox_index = 0
         self.annotation_file = r'E:\workspace\python\Tools\check_nodule_classification\lung_M_class_0001-1800.csv'
+        self.image_direction = r'D:\Bme_Dataset\Raw_npy'
+        self.bbox_annotation_file = r'match_table_test.csv'
+        self.patient_ids_file = r'patient_ids.txt'
+        self.output_file_name = r''
         self.mask_root = r'npz'
         self.Cls_manager.set_mask_root(self.mask_root)
         self.Cls_manager.load_csv_file(self.annotation_file)
     
-        with open(r'patient_ids.txt', 'r') as f:
+        with open(self.patient_ids_file, 'r') as f:
             patient_ids = f.readlines()
         self.patient_ids = [patient_id.strip() for patient_id in patient_ids]
         self.initWidget()
+        
+        self.load_images_from_direction(self.image_direction)
+        self.load_bboxes_from_file(self.bbox_annotation_file)
         
     def initWidget(self):
         # widgets
@@ -67,11 +73,11 @@ class Controller(QtWidgets.QWidget):
         
         # control layout
         control_VBlayout = QtWidgets.QVBoxLayout()
-        ## load
-        load_HBlayout = QtWidgets.QHBoxLayout()
-        load_HBlayout.addWidget(self.load_image_direction_button)
-        load_HBlayout.addWidget(self.load_bbox_direction_button)
-        control_VBlayout.addLayout(load_HBlayout)
+        # ## load
+        # load_HBlayout = QtWidgets.QHBoxLayout()
+        # load_HBlayout.addWidget(self.load_image_direction_button)
+        # load_HBlayout.addWidget(self.load_bbox_button)
+        # control_VBlayout.addLayout(load_HBlayout)
         ## patient index
         control_VBlayout.addWidget(self.patient_index_controller)
         ## table
@@ -84,6 +90,10 @@ class Controller(QtWidgets.QWidget):
         control_VBlayout.addWidget(self.bbox_info_display)
         
         ## output
+        # output_HBlayout = QtWidgets.QHBoxLayout()
+        # output_HBlayout.addWidget(self.output_button)
+        # output_HBlayout.addWidget(self.load_bbox_button)
+        # control_VBlayout.addLayout(output_HBlayout)
         control_VBlayout.addWidget(self.output_button)
         control_VBlayout.addWidget(QtWidgets.QWidget())
         
@@ -106,7 +116,7 @@ class Controller(QtWidgets.QWidget):
         
         # func
         self.load_image_direction_button.load_image_direction_clicked.connect(self.load_images_from_direction)
-        self.load_bbox_direction_button.load_annotation_direction_clicked.connect(self.load_bboxes_from_direction)
+        self.load_bbox_button.load_annotation_clicked.connect(self.load_bboxes_from_file)
         self.Cls_button_list.Cls_button_clicked.connect(self.jump_to_nodule_start_slice)
         self.Cls_button_list.Cls_check_box_clicked.connect(self.change_cls_checked)
         self.bbox_button_list.bbox_button_clicked.connect(self.bbox_index_changed)
@@ -138,7 +148,6 @@ class Controller(QtWidgets.QWidget):
     def load_images_from_direction(self, direction_path):
         image_paths = [f'{direction_path}/{patient_id}.npy' for patient_id in self.patient_ids]
         self.patient_manager.add_images_from_direction(self.patient_ids, image_paths)
-        self.patient_manager.load_bboxes(r'match_table_test.csv')
         patient_index = self.patient_manager.get_current_index()
         if patient_index is None:
             return
@@ -147,9 +156,20 @@ class Controller(QtWidgets.QWidget):
         self.patient_index_controller.clear()
         self.patient_index_controller.addPatients(self.patient_ids)
         self.load_bbox_direction_button.setEnabled(True)
+                
+        cls_patient = self.Cls_manager.get_patient(self.patient_ids[patient_index])
+        if cls_patient is None:
+            return
+            
+    def load_bboxes_from_direction(self, direction_path):
+        print('load bboxes')
+    
+    def load_bboxes_from_file(self, file_path):
+        if self.patient_manager is None:
+            return
+        self.patient_manager.load_bboxes(file_path)
         
         patient_index = self.patient_manager.get_current_index()
-        
         if patient_index is None:
             return
         
@@ -157,39 +177,14 @@ class Controller(QtWidgets.QWidget):
         if patient is None:
             return
         
-        cls_patient = self.Cls_manager.get_patient(self.patient_ids[patient_index])
-        if cls_patient is None:
-            return
-        
         self.player_with_bbox.load_bbox(patient)
         self.bbox_button_list.clear_buttons()
-        self.bbox_button_list.add_bboxes(patient, cls_patient)
+        self.bbox_button_list.add_bboxes(patient)
+        
         is_valid = self.bbox_button_list.set_bbox_button_index(self.bbox_index)
-        print(self.bbox_index)
         if is_valid:
-            print(patient.get_bbox_index(self.bbox_index))
-            self.jump_to_nodule_bbox_start_slice(self.bbox_index)
+            # self.jump_to_nodule_bbox_start_slice(self.bbox_index)
             self.player_with_bbox.focus_bbox(patient.get_bbox_index(self.bbox_index))
-            
-    def load_bboxes_from_direction(self, direction_path):
-        # if len(self.patient_ids) == 0:
-        #     return
-        # bbox_paths = [f'{direction_path}/{patient_id}.json' for patient_id in self.patient_ids]
-        # self.patient_manager.add_bboxes_from_direction(self.patient_ids, bbox_paths)
-        
-        # patient_index = self.patient_manager.get_current_index()
-        # if patient_index is None:
-        #     return
-        # self.player_with_bbox.load_bbox(self.patient_manager.get_patient(patient_index))
-        
-        # self.bbox_button_list.clear_buttons()
-        # self.bbox_button_list.add_bboxes(self.patient_manager.get_patient(patient_index), self.Cls_manager.get_patient(self.patient_ids[patient_index]))
-        
-        # is_valid = self.bbox_button_list.set_bbox_button_index(self.bbox_index)
-        # if is_valid:
-        #     self.jump_to_nodule_bbox_start_slice(self.bbox_index)
-        #     self.player_with_bbox.focus_bbox(self.bbox_index)
-        print('load bboxes')
         
     def next_patient(self):
         self.patient_manager.next_index()
@@ -232,7 +227,7 @@ class Controller(QtWidgets.QWidget):
         self.bbox_index = 0
         self.reset_info()
         self.bbox_button_list.clear_buttons()
-        self.bbox_button_list.add_bboxes(patient, cls_patient)
+        self.bbox_button_list.add_bboxes(patient)
         
         self.player.load_image(patient, cls_patient)
         
@@ -319,7 +314,7 @@ class Controller(QtWidgets.QWidget):
         print('confirm')
         
     def output(self):
-        self.patient_manager.output_match_table(r'match_table_temp1.csv')
+        self.patient_manager.output_match_table(self.output_file_name,r'output')
     
     def change_bbox_checked(self, is_checked:bool, bbox_id:int, patietn_id:str):
         patient = self.patient_manager.get_patient_from_id(patietn_id)

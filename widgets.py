@@ -1,7 +1,3 @@
-from itertools import count
-from operator import is_
-from re import M
-from tracemalloc import start
 from PyQt5 import QtCore, QtGui, QtWidgets 
 import numpy as np
 import cv2
@@ -421,6 +417,7 @@ class LoadAnnotationButton(QtWidgets.QPushButton):
     def __init__(self, parent=None):
         super(LoadAnnotationButton, self).__init__(parent)
         self.setText('Load annotation')
+        self.setFixedSize(QtCore.QSize(260, 50))
         self.clicked.connect(self.load_annotation)
     
     def load_annotation(self):
@@ -696,7 +693,7 @@ class BboxesButtonListView(QtWidgets.QWidget):
         self.bbox_buttons.append(button)
         self.button_layout.addRow(button)
     
-    def add_bboxes(self, patient:Manager.Patient, patient_cls_element:Manager.PatientClsElement):
+    def add_bboxes(self, patient:Manager.Patient):
         del self.bbox_buttons
         self.bbox_buttons = []
         self.patient_id = patient.get_image_id()

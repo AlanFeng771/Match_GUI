@@ -1,10 +1,8 @@
-from operator import index
-from tkinter import N
-from turtle import width
 import numpy as np
 import json
 import csv
 import tools.tools as tools
+import tools.utils as utils
 import os
 from typing import Union
 class Bbox:
@@ -83,7 +81,6 @@ class Patient:
         self.sorted_bboxes = sorted(self.bboxes, key=lambda bbox: bbox.get_start_slice()) 
         self.sorted_indexs = sorted((start_slice, bbox_index) for bbox_index, start_slice in enumerate(start_slices))
         self.sorted_indexs = [sorted_index[1] for sorted_index in self.sorted_indexs]
-        print(self.sorted_indexs)
 
     def set_image_path(self, image_path:str):
         self.image_path = image_path
@@ -231,20 +228,27 @@ class PatientManager:
                     return
                 patient.set_bbox(bbox_list)
         
-    def output_match_table(self, match_table_file:str):
-        with open(match_table_file, 'w', newline='') as file:
+    def output_match_table(self, match_table_file:str, save_dir:str):
+        if match_table_file == '':
+            match_table_file = utils.get_local_time_str_in_taiwan()
+        
+        output_path = os.path.join(save_dir, '{}.csv'.format(match_table_file))
+        # 檢查output_path是否存在
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+                
+        with open(output_path, 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(['patient_id','center_x','center_y','center_z','width','height','depth','type','index','is_checked'])
             for patient_id, patient in self.patients.items():
                 bbox = patient.get_bboxes()
                 for bbox_index, bbox_data in enumerate(bbox):
-                    if bbox_data.get_checked():
-                        if bbox_data.get_bbox_type() == 0:
-                            writer.writerow([patient_id, bbox_data.bbox[0], bbox_data.bbox[1], bbox_data.bbox[2], bbox_data.bbox[3], bbox_data.bbox[4], bbox_data.bbox[5], bbox_data.get_bbox_type(), bbox_data.get_nodule_index(), bbox_data.get_checked()])
-                        elif bbox_data.get_bbox_type() == 1:
-                            writer.writerow([patient_id, bbox_data.bbox[0], bbox_data.bbox[1], bbox_data.bbox[2], bbox_data.bbox[3], bbox_data.bbox[4], bbox_data.bbox[5], bbox_data.get_bbox_type(), bbox_data.get_box_group(), bbox_data.get_checked()])
-                        else:
-                            writer.writerow([patient_id, bbox_data.bbox[0], bbox_data.bbox[1], bbox_data.bbox[2], bbox_data.bbox[3], bbox_data.bbox[4], bbox_data.bbox[5], bbox_data.get_bbox_type(), -1, bbox_data.get_checked()])
+                    if bbox_data.get_bbox_type() == 0:
+                        writer.writerow([patient_id, bbox_data.bbox[0], bbox_data.bbox[1], bbox_data.bbox[2], bbox_data.bbox[3], bbox_data.bbox[4], bbox_data.bbox[5], bbox_data.get_bbox_type(), bbox_data.get_nodule_index(), bbox_data.get_checked()])
+                    elif bbox_data.get_bbox_type() == 1:
+                        writer.writerow([patient_id, bbox_data.bbox[0], bbox_data.bbox[1], bbox_data.bbox[2], bbox_data.bbox[3], bbox_data.bbox[4], bbox_data.bbox[5], bbox_data.get_bbox_type(), bbox_data.get_box_group(), bbox_data.get_checked()])
+                    else:
+                        writer.writerow([patient_id, bbox_data.bbox[0], bbox_data.bbox[1], bbox_data.bbox[2], bbox_data.bbox[3], bbox_data.bbox[4], bbox_data.bbox[5], bbox_data.get_bbox_type(), -1, bbox_data.get_checked()])
         
 class ClsElement:
     def __init__(self, start_slice:int, category:int):

@@ -13,9 +13,9 @@ class Controller(QtWidgets.QWidget):
         self.bbox_index = 0
         self.annotation_file = r'E:\workspace\python\Tools\check_nodule_classification\lung_M_class_0001-1800.csv'
         self.image_direction = r'D:\Bme_Dataset\Raw_npy'
-        self.bbox_annotation_file = r'match_table_test.csv'
-        self.patient_ids_file = r'patient_ids.txt'
-        self.output_file_name = r''
+        self.bbox_annotation_file = r'output\match_table_test.csv'
+        self.patient_ids_file = r'patient_ids\patient_ids_sub1.txt'
+        self.output_file_name = r'sub_patient1'
         self.mask_root = r'npz'
         self.Cls_manager.set_mask_root(self.mask_root)
         self.Cls_manager.load_csv_file(self.annotation_file)
@@ -24,7 +24,7 @@ class Controller(QtWidgets.QWidget):
             patient_ids = f.readlines()
         self.patient_ids = [patient_id.strip() for patient_id in patient_ids]
         self.initWidget()
-        
+        self.patient_manager.set_patient_ids(self.patient_ids)
         self.load_images_from_direction(self.image_direction)
         self.load_bboxes_from_file(self.bbox_annotation_file)
         
@@ -187,17 +187,17 @@ class Controller(QtWidgets.QWidget):
             self.player_with_bbox.focus_bbox(patient.get_bbox_index(self.bbox_index))
         
     def next_patient(self):
-        self.patient_manager.next_index()
-        patient_index = self.patient_manager.get_current_index()
+        patient_index = self.patient_manager.next_index()
         if patient_index is None:
+            print('patient is not in bbox list')
             return
         else:
             self.patient_index_controller.setPatientIndex(patient_index)            
     
     def previous_patient(self):
-        self.patient_manager.previous_index()
-        patient_index = self.patient_manager.get_current_index()
+        patient_index = self.patient_manager.previous_index()
         if patient_index is None:
+            print('patient is not in bbox list')
             return
         else:
             self.patient_index_controller.setPatientIndex(patient_index)
@@ -314,7 +314,7 @@ class Controller(QtWidgets.QWidget):
         print('confirm')
         
     def output(self):
-        self.patient_manager.output_match_table(self.output_file_name,r'output')
+        self.patient_manager.output_match_table(self.output_file_name,r'output', patient_ids=self.patient_ids)
     
     def change_bbox_checked(self, is_checked:bool, bbox_id:int, patietn_id:str):
         patient = self.patient_manager.get_patient_from_id(patietn_id)

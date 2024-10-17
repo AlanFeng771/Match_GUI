@@ -1,3 +1,4 @@
+import re
 import numpy as np
 import json
 import csv
@@ -87,6 +88,8 @@ class Patient:
     
     def get_images(self):
         # return np.load(self.image_path)['image']
+        if self.image_path is None:
+            return None
         return tools.normalize_raw_image(np.load(self.image_path))
     
     def get_bboxes(self):
@@ -135,8 +138,12 @@ class PatientManager:
         self.current_patient_index = None
         self.current_bbox_index = None
         self.patients = {}
+        self.patient_ids = []
         self.match_table:dict = {}
 
+    def set_patient_ids(self, patinet_ids:list):
+        self.patient_ids = patinet_ids
+        
     def get_patient(self, patient_index: int) -> Union[Patient, None]:
         patient_ids = list(self.patients.keys())
         patient_id = patient_ids[patient_index]
@@ -171,29 +178,35 @@ class PatientManager:
             self.current_patient_index = 0
             
         for patient_id, image_path in zip(patient_ids, image_paths):
-            self.add_image_from_file(patient_id, image_path)
+            if patient_id in self.patient_ids:
+                self.add_image_from_file(patient_id, image_path)
+        
         
     def get_current_index(self):
         return self.current_patient_index
     
-    def next_index(self):
+    def next_index(self)-> Union[int, None]:
         patient_ids = list(self.patients.keys())
         if self.current_patient_index is None:
             return None
         
-        if self.current_patient_index == len(patient_ids) - 1:
-            self.current_patient_index = len(patient_ids) - 1
+        if self.current_patient_index == len(patient_ids)-1:
+            return None
         else:
             self.current_patient_index += 1
+        
+        return self.current_patient_index
     
     def previous_index(self):
         if self.current_patient_index is None:
             return None
 
         if self.current_patient_index == 0:
-            self.current_patient_index = 0
+            return None
         else:
             self.current_patient_index -= 1
+        
+        return self.current_patient_index
     
     def set_patient_index(self, patient_index:int):
         patient_ids = list(self.patients.keys())
@@ -218,20 +231,21 @@ class PatientManager:
                 patient_id = row['patient_id']
                 bbox_list = [float(row['center_x']), float(row['center_y']), float(row['center_z']), int(row['width']), int(row['height']), int(row['depth']), int(row['type']), int(row['index']), row['is_checked']=='True']
                 
-                if patient_id not in self.patients:
+                if patient_id not in self.patient_ids:
+                    continue
+                
+                if patient_id not in list(self.patients.keys()):
                     patient = Patient(patient_id)
                     self._add_patient(patient)
                 else:
                     patient = self.get_patient_from_id(patient_id)
                 
                 if patient is None:
-                    return
+                    continue
                 patient.set_bbox(bbox_list)
         
-    def output_match_table(self, match_table_file:str, save_dir:str):
-        if match_table_file == '':
-            match_table_file = utils.get_local_time_str_in_taiwan()
-        
+    def output_match_table(self, tag:str, save_dir:str, patient_ids:list):
+        match_table_file = utils.get_local_time_str_in_taiwan()+'_'+tag       
         output_path = os.path.join(save_dir, '{}.csv'.format(match_table_file))
         # 檢查output_path是否存在
         if not os.path.exists(save_dir):
@@ -243,12 +257,13 @@ class PatientManager:
             for patient_id, patient in self.patients.items():
                 bbox = patient.get_bboxes()
                 for bbox_index, bbox_data in enumerate(bbox):
-                    if bbox_data.get_bbox_type() == 0:
-                        writer.writerow([patient_id, bbox_data.bbox[0], bbox_data.bbox[1], bbox_data.bbox[2], bbox_data.bbox[3], bbox_data.bbox[4], bbox_data.bbox[5], bbox_data.get_bbox_type(), bbox_data.get_nodule_index(), bbox_data.get_checked()])
-                    elif bbox_data.get_bbox_type() == 1:
-                        writer.writerow([patient_id, bbox_data.bbox[0], bbox_data.bbox[1], bbox_data.bbox[2], bbox_data.bbox[3], bbox_data.bbox[4], bbox_data.bbox[5], bbox_data.get_bbox_type(), bbox_data.get_box_group(), bbox_data.get_checked()])
-                    else:
-                        writer.writerow([patient_id, bbox_data.bbox[0], bbox_data.bbox[1], bbox_data.bbox[2], bbox_data.bbox[3], bbox_data.bbox[4], bbox_data.bbox[5], bbox_data.get_bbox_type(), -1, bbox_data.get_checked()])
+                    if patient_id in patient_ids:
+                        if bbox_data.get_bbox_type() == 0:
+                            writer.writerow([patient_id, bbox_data.bbox[0], bbox_data.bbox[1], bbox_data.bbox[2], bbox_data.bbox[3], bbox_data.bbox[4], bbox_data.bbox[5], bbox_data.get_bbox_type(), bbox_data.get_nodule_index(), bbox_data.get_checked()])
+                        elif bbox_data.get_bbox_type() == 1:
+                            writer.writerow([patient_id, bbox_data.bbox[0], bbox_data.bbox[1], bbox_data.bbox[2], bbox_data.bbox[3], bbox_data.bbox[4], bbox_data.bbox[5], bbox_data.get_bbox_type(), bbox_data.get_box_group(), bbox_data.get_checked()])
+                        else:
+                            writer.writerow([patient_id, bbox_data.bbox[0], bbox_data.bbox[1], bbox_data.bbox[2], bbox_data.bbox[3], bbox_data.bbox[4], bbox_data.bbox[5], bbox_data.get_bbox_type(), -1, bbox_data.get_checked()])
         
 class ClsElement:
     def __init__(self, start_slice:int, category:int):

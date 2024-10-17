@@ -1,0 +1,5 @@
+patient_id,center_x,center_y,center_z,width,height,depth,type,index,is_checked
+0001,395.0,195.0,225.5,8,8,5,0,0,True
+0002,380.0,138.0,336.5,20,14,9,0,1,False
+0002,178.0,153.0,322.0,8,12,10,0,0,False
+0003,449.0,329.0,452.0,10,10,6,0,0,False

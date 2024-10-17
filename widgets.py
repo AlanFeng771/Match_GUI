@@ -165,6 +165,8 @@ class PlayerView(QtWidgets.QWidget):
         
     def load_image(self, patient:Manager.Patient, patient_cls_element:Manager.PatientClsElement):
         self.images = patient.get_images()
+        if self.images is None:
+            return
         self.image_index = 0
         self.contour_images = patient_cls_element.get_contour_images()
         self.scrollBar.setMaximum(self.images.shape[2]-1)
@@ -238,6 +240,8 @@ class PlayerWithRectView(QtWidgets.QWidget):
             
     def load_image(self, patient:Manager.Patient):
         self.images = patient.get_images()
+        if self.images is None:
+            return
         self.image_index = 0
         self.scrollBar.setMaximum(self.images.shape[2]-1)
         self.show_image()

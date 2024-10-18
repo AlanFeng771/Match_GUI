@@ -3,20 +3,29 @@ from PyQt5 import QtWidgets
 from PyQt5.QtGui import QKeySequence
 import widgets
 import Manager
+import argparse
+import logging
+logger = logging.getLogger(__name__)
 class Controller(QtWidgets.QWidget):
-    def __init__(self):
+    def __init__(self, args):
         super(Controller, self).__init__()
         self.patient_manager = Manager.PatientManager()
         self.Cls_manager = Manager.ClsManager()
         self.patient_ids = []
         self.cls_index = 0
         self.bbox_index = 0
-        self.annotation_file = r'E:\workspace\python\Tools\check_nodule_classification\lung_M_class_0001-1800.csv'
-        self.image_direction = r'D:\Bme_Dataset\Raw_npy'
-        self.bbox_annotation_file = r'output\match_table_test.csv'
-        self.patient_ids_file = r'patient_ids\patient_ids_sub1.txt'
-        self.output_file_name = r'sub_patient1'
-        self.mask_root = r'npz'
+        # self.annotation_file = r'E:\workspace\python\Tools\check_nodule_classification\lung_M_class_0001-1800.csv'
+        # self.image_direction = r'D:\Bme_Dataset\Raw_npy'
+        # self.bbox_annotation_file = r'bbox_annotation.csv'
+        # self.patient_ids_file = r'patient_ids\patient_ids_sub1.txt'
+        # self.output_file_name = r'sub_patient1'
+        # self.mask_root = r'mask_npz'
+        self.annotation_file = args.annotation_file
+        self.image_direction = args.image_root
+        self.bbox_annotation_file = args.bbox_annotation_file
+        self.patient_ids_file = args.patient_ids_file
+        self.output_file_name = args.output_file_name
+        self.mask_root = args.mask_root
         self.Cls_manager.set_mask_root(self.mask_root)
         self.Cls_manager.load_csv_file(self.annotation_file)
     
@@ -79,6 +88,7 @@ class Controller(QtWidgets.QWidget):
         # load_HBlayout.addWidget(self.load_bbox_button)
         # control_VBlayout.addLayout(load_HBlayout)
         ## patient index
+        control_VBlayout.addWidget(QtWidgets.QWidget())
         control_VBlayout.addWidget(self.patient_index_controller)
         ## table
         table_HBlayout = QtWidgets.QHBoxLayout()
@@ -183,7 +193,7 @@ class Controller(QtWidgets.QWidget):
         
         is_valid = self.bbox_button_list.set_bbox_button_index(self.bbox_index)
         if is_valid:
-            # self.jump_to_nodule_bbox_start_slice(self.bbox_index)
+            self.jump_to_nodule_bbox_start_slice(self.bbox_index)
             self.player_with_bbox.focus_bbox(patient.get_bbox_index(self.bbox_index))
         
     def next_patient(self):
@@ -387,12 +397,21 @@ class Controller(QtWidgets.QWidget):
             print('Other')
         else:
             print('Error')
-            
+
     
 if __name__ == '__main__':
     import sys
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--annotation_file', type=str, default = '')
+    parser.add_argument('--bbox_annotation_file', type = str, default='')
+    parser.add_argument('--image_root', type=str, default = '')
+    parser.add_argument('--patient_ids_file', type = str, default='')
+    parser.add_argument('--output_file_name', type = str, default='')
+    parser.add_argument('--mask_root', type = str, default='')
+    
+    args = parser.parse_args()
     app = QtWidgets.QApplication(sys.argv)
-    controller = Controller()
+    controller = Controller(args)
     controller.setGeometry(500, 300, 1200, 600)
     controller.showMaximized()
     sys.exit(app.exec_())

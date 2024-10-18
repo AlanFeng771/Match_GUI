@@ -5,8 +5,8 @@
 #### Question
 目前根據統計nodule和bbox的對應會有幾種請況:
 1. bbox和nodle的對應是一對一的關係
-2. bbox和nodle的對應是一對多的關係
-3. bbox和nodle的對應是多對一的關係
+2. bbox和nodle的對應是多對一的關係
+3. bbox和nodle的對應是一對多的關係
 
 ##### Analysis
 1. bbox和nodle的對應是一對一的關係
@@ -52,7 +52,49 @@
     > 可以發現nodule 0, nodule 1應該被視為同一個
 ### GUI
 #### 前置作業
+請確保你具有以下的檔案:
+1. lung_M_class_0001-1800.csv -> 醫生根據mask標記的資訊
+2. Raw_npy/  -> 原始的dicom image 轉換成npy檔(沒有經過resample)
+    |--0001.npy
+    |--0002.npy
+    |--...
+3. mask_npz/ -> GT mask 轉換成npz檔(沒有經過resample)
+    |--0001.npz
+    |--0002.npz
+    |--...
+4. bbox_annotation.csv -> 3d cclabling演算法轉換的bbox (patient_id,center_x,center_y,center_z,width,height,depth,type,index,is_checked)
+5. patient_ids.txt -> 紀錄病人的ids (根據個人標記需求調整，gui會根據這個檔案的顯示需要標記的病人，不包含在內的病人不會顯示) 
 
+#### 啟動GUI
+- 請修改start.bat 正確的參數 (參考**前置作業**)
+> output_file_name 可自行決定，這會決定輸出檔案的名稱(時間標記+output_file_name) (ex: [%d-%02d-%02d-%02d%02d]_output_file_name.csv) 
+- 執行start.bat
+
+#### GUI介紹
+![alt text](image-18.png)
+- gui 分成兩個部分
+    1. dicom image的顯示器
+        1. 左邊的部分顯示nodule對應的dicom image，紅色的輪廓根據mask產生
+        2. 右邊的部分顯示bbox對應的dicom image，矩形為bbox的位置
+            1. 綠色的矩形代表目前選擇的bbox
+            2. 紅色的矩形代表目前未被選擇的bbox
+
+        ![alt text](image-19.png)
+    2. nodules和bbox的控制元件
+        1. 左邊的部分顯示nodule的資訊
+            - 點選nodule id，顯示器左邊將會跳轉到對應的start slice
+            > 因為式start slice，可以利用這個特性確定現在的nodule在mask上的位置，但是醫生標記的部分start slice是錯誤的。
+        2. 右邊的部分顯示bbox的資訊
+            - 點選bbox id，顯示器左邊將會跳轉到對應的start slice
+            - 下方會同步顯示bbox的資訊(參考**使用方法**)
+
+        ![alt text](image-20.png)
+    3. Other
+        1. next -> 下一個patient
+        2. previous -> 上一個patient
+        ![alt text](image-21.png)
+        3. output -> 輸出目前的結果
+        
 #### 使用方式
 我將bbox根據上面定義的問題應該要對應的操作分成四個部分:
 1. Match-> 一個bbox對應到一個nodule

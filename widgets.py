@@ -1,3 +1,4 @@
+from operator import is_
 from PyQt5 import QtCore, QtGui, QtWidgets 
 import numpy as np
 import cv2
@@ -104,6 +105,7 @@ class PlayerView(QtWidgets.QWidget):
     def __init__(self):
         super(PlayerView, self).__init__()
         self.images = None
+        self.num_of_images = 0
         self.contour_images = None
         self.setFixedSize(QtCore.QSize(512, 512))
         self.initWidget()
@@ -149,15 +151,23 @@ class PlayerView(QtWidgets.QWidget):
     
     def _generate_contour_item(self, contour_image):
         height, width = contour_image.shape
+        contour_image = np.array(contour_image, dtype=np.uint8)
+
+            
         contour_pixmap = QtGui.QPixmap(width, height)
         transparent_color = QtGui.QColor(0, 0, 0, 0)
         contour_pixmap.fill(transparent_color)
         painter = QtGui.QPainter(contour_pixmap)
-        for y in range(height):
-            for x in range(width):
-                if contour_image[y, x] == 255:  # If it's an edge
-                    painter.setPen(QtGui.QColor(255, 0, 0, contour_image[y, x]))  # Red color for edges
-                    painter.drawPoint(x, y)
+        
+        if np.max(contour_image) == 0:
+            print('invalid contour image')
+            painter.end()
+            return QtWidgets.QGraphicsPixmapItem(contour_pixmap)
+        
+        y_index, x_index = np.where(contour_image == 255)
+        for y, x in zip(y_index, x_index):
+            painter.setPen(QtGui.QColor(255, 0, 0, contour_image[y, x]))  # Red color for edges
+            painter.drawPoint(x, y)
         painter.end()
         contour_item = QtWidgets.QGraphicsPixmapItem(contour_pixmap)
         
@@ -168,6 +178,7 @@ class PlayerView(QtWidgets.QWidget):
         if self.images is None:
             return
         self.image_index = 0
+        self.num_of_images = self.images.shape[2]
         self.contour_images = patient_cls_element.get_contour_images()
         self.scrollBar.setMaximum(self.images.shape[2]-1)
         self.show_image()
@@ -190,11 +201,41 @@ class PlayerView(QtWidgets.QWidget):
     
     def set_current_scrollbar_index(self, value:int):
         self.scrollBar.setValue(value)
+    
+    def reset_rects(self):
+        # init
+        for rect in self.rects:
+            self.viewer.remove_item(rect)
+
+        del self.rects
+        # init bbox annotation
+        self.rects = []
+    
+    def wheelEvent(self, event):
+        modifiers = event.modifiers()
+        if modifiers == QtCore.Qt.NoModifier:
+            if event.angleDelta().y() > 0:
+                action = 'next'
+            else:
+                action = 'previous'
+
+            self.scroll_image(action)
+            
+    def scroll_image(self, type):
+        if type == 'previous':
+            if self.image_index > 0:
+                currrent_image_index = self.image_index
+                self.scrollBar.setValue(currrent_image_index-1)
+        elif type == 'next':
+            if self.image_index < self.num_of_images-1:
+                currrent_image_index = self.image_index
+                self.scrollBar.setValue(currrent_image_index+1) 
 
 class PlayerWithRectView(QtWidgets.QWidget):
     def __init__(self):
         super(PlayerWithRectView, self).__init__()
         self.images = None
+        self.num_of_images = 0
         self.rects = []
         self.setFixedSize(QtCore.QSize(512, 512))
         self.initWidget()
@@ -243,6 +284,7 @@ class PlayerWithRectView(QtWidgets.QWidget):
         if self.images is None:
             return
         self.image_index = 0
+        self.num_of_images = self.images.shape[2]
         self.scrollBar.setMaximum(self.images.shape[2]-1)
         self.show_image()
     
@@ -296,6 +338,26 @@ class PlayerWithRectView(QtWidgets.QWidget):
         del self.rects
         # init bbox annotation
         self.rects = []
+    
+    def wheelEvent(self, event):
+        modifiers = event.modifiers()
+        if modifiers == QtCore.Qt.NoModifier:
+            if event.angleDelta().y() > 0:
+                action = 'next'
+            else:
+                action = 'previous'
+
+            self.scroll_image(action)
+
+    def scroll_image(self, type):
+        if type == 'previous':
+            if self.image_index > 0:
+                currrent_image_index = self.image_index
+                self.scrollBar.setValue(currrent_image_index-1)
+        elif type == 'next':
+            if self.image_index < self.num_of_images-1:
+                currrent_image_index = self.image_index
+                self.scrollBar.setValue(currrent_image_index+1) 
  
 class PatientIndexBox(QtWidgets.QComboBox):
     def __init__(self):

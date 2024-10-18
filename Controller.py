@@ -1,3 +1,4 @@
+from email.mime import base
 from PyQt5.QtCore import Qt
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QKeySequence
@@ -5,6 +6,7 @@ import widgets
 import Manager
 import argparse
 import logging
+import os
 logger = logging.getLogger(__name__)
 class Controller(QtWidgets.QWidget):
     def __init__(self, args):
@@ -14,12 +16,6 @@ class Controller(QtWidgets.QWidget):
         self.patient_ids = []
         self.cls_index = 0
         self.bbox_index = 0
-        # self.annotation_file = r'E:\workspace\python\Tools\check_nodule_classification\lung_M_class_0001-1800.csv'
-        # self.image_direction = r'D:\Bme_Dataset\Raw_npy'
-        # self.bbox_annotation_file = r'bbox_annotation.csv'
-        # self.patient_ids_file = r'patient_ids\patient_ids_sub1.txt'
-        # self.output_file_name = r'sub_patient1'
-        # self.mask_root = r'mask_npz'
         self.annotation_file = args.annotation_file
         self.image_direction = args.image_root
         self.bbox_annotation_file = args.bbox_annotation_file
@@ -31,6 +27,7 @@ class Controller(QtWidgets.QWidget):
     
         with open(self.patient_ids_file, 'r') as f:
             patient_ids = f.readlines()
+            
         self.patient_ids = [patient_id.strip() for patient_id in patient_ids]
         self.initWidget()
         self.patient_manager.set_patient_ids(self.patient_ids)
@@ -83,10 +80,6 @@ class Controller(QtWidgets.QWidget):
         # control layout
         control_VBlayout = QtWidgets.QVBoxLayout()
         # ## load
-        # load_HBlayout = QtWidgets.QHBoxLayout()
-        # load_HBlayout.addWidget(self.load_image_direction_button)
-        # load_HBlayout.addWidget(self.load_bbox_button)
-        # control_VBlayout.addLayout(load_HBlayout)
         ## patient index
         control_VBlayout.addWidget(QtWidgets.QWidget())
         control_VBlayout.addWidget(self.patient_index_controller)
@@ -100,10 +93,6 @@ class Controller(QtWidgets.QWidget):
         control_VBlayout.addWidget(self.bbox_info_display)
         
         ## output
-        # output_HBlayout = QtWidgets.QHBoxLayout()
-        # output_HBlayout.addWidget(self.output_button)
-        # output_HBlayout.addWidget(self.load_bbox_button)
-        # control_VBlayout.addLayout(output_HBlayout)
         control_VBlayout.addWidget(self.output_button)
         control_VBlayout.addWidget(QtWidgets.QWidget())
         
@@ -324,8 +313,41 @@ class Controller(QtWidgets.QWidget):
         print('confirm')
         
     def output(self):
-        self.patient_manager.output_match_table(self.output_file_name,r'output', patient_ids=self.patient_ids)
+        output_path = os.path.join('output', '{}.csv'.format(self.output_file_name))
+        # if os.path.exists(output_path):
+        #     self.nw = widgets.newWindow()
+        #     self.nw.show()
+        #     x = self.nw.pos().x()
+        #     y = self.nw.pos().y()
+        #     self.nw.move(x+50, y+50)
+        #     self.nw.btn1.clicked.connect(lambda: self.replace_output_path(output_path))
+        #     self.nw.btn2.clicked.connect(lambda: self.new_output_path(output_path))
+            
+        # else:
+        #     self.patient_manager.output_match_table(output_path=output_path, patient_ids=self.patient_ids)
+        self.patient_manager.output_match_table(output_path=output_path, patient_ids=self.patient_ids)
     
+    def new_output_path(self, file_path:str):
+        index = 1
+        base_file = os.path.basename(file_path)[:-4] + '_{}'.format(index)
+        file_path = os.path.join('output', '{}.csv'.format(base_file))
+        while os.path.exists(file_path):
+            index += 1
+            base_file_split = base_file.split('_')
+            base_file = base_file_split[0]
+            for file_split in base_file_split[1:-1]:
+                base_file += '_{}'.format(file_split)
+            base_file += '_{}'.format(index)
+            file_path = os.path.join('output', '{}.csv'.format(base_file))
+            
+        self.patient_manager.output_match_table(output_path=file_path, patient_ids=self.patient_ids)
+        self.nw.close()
+    
+    def replace_output_path(self, file_path:str):
+        self.patient_manager.output_match_table(output_path=file_path, patient_ids=self.patient_ids)
+        self.nw.close()
+        
+        
     def change_bbox_checked(self, is_checked:bool, bbox_id:int, patietn_id:str):
         patient = self.patient_manager.get_patient_from_id(patietn_id)
         if patient is None:

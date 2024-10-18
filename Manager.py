@@ -244,13 +244,7 @@ class PatientManager:
                     continue
                 patient.set_bbox(bbox_list)
         
-    def output_match_table(self, tag:str, save_dir:str, patient_ids:list):
-        match_table_file = utils.get_local_time_str_in_taiwan()+'_'+tag       
-        output_path = os.path.join(save_dir, '{}.csv'.format(match_table_file))
-        # 檢查output_path是否存在
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-                
+    def output_match_table(self, output_path:str, patient_ids:list): 
         with open(output_path, 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(['patient_id','center_x','center_y','center_z','width','height','depth','type','index','is_checked'])

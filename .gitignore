@@ -1,5 +1,5 @@
 bbox/
 npy/
-npz/
+mask_npz/
 *.npy
 npy/*.npy

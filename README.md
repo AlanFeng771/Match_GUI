@@ -67,7 +67,7 @@
 
 #### 啟動GUI
 - 請修改start.bat 正確的參數 (參考**前置作業**)
-> output_file_name 可自行決定，這會決定輸出檔案的名稱(時間標記+output_file_name) (ex: [%d-%02d-%02d-%02d%02d]_output_file_name.csv) 
+> output_file_name 可自行決定，這會決定輸出檔案的名稱 (ex: output_file_name.csv) 
 - 執行start.bat
 
 #### GUI介紹

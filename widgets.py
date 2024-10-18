@@ -160,7 +160,6 @@ class PlayerView(QtWidgets.QWidget):
         painter = QtGui.QPainter(contour_pixmap)
         
         if np.max(contour_image) == 0:
-            print('invalid contour image')
             painter.end()
             return QtWidgets.QGraphicsPixmapItem(contour_pixmap)
         
@@ -995,3 +994,27 @@ class OutputButton(QtWidgets.QPushButton):
         self.setFixedSize(QtCore.QSize(200, 50))
         self.setText('Output')
         self.clicked.connect(lambda: self.button_clicked.emit())
+        
+class newWindow(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__()
+        # self.setWindowTitle('Warning')
+        # self.resize(300, 200)
+        self.ui()
+
+    def ui(self):
+        self.label = QtWidgets.QLabel(self)
+        self.label.setText('儲存檔案已經存在，是否覆蓋？')
+        self.label.setStyleSheet('font-size:12px;')
+        self.label.setGeometry(50,30,200,30)
+
+        self.btn1 = QtWidgets.QPushButton(self)
+        self.btn1.setText('覆蓋')
+        self.btn1.setStyleSheet('font-size:16px;')
+        self.btn1.setGeometry(40,60,120,40)
+        
+        self.btn2 = QtWidgets.QPushButton(self)
+        self.btn2.setText('新增')
+        self.btn2.setStyleSheet('font-size:16px;')
+        self.btn2.setGeometry(160,60,120,40)
+        

@@ -132,13 +132,23 @@ class Controller(QtWidgets.QWidget):
         self.bbox_info_display.bbox_index_changed.connect(self.change_bbox_info)
     
     def reset_info(self):
-        patient = self.patient_manager.get_patient(self.patient_manager.get_current_index())
+        patient_index = self.patient_manager.get_current_index()
+        if patient_index is None:
+            return
+        patient = self.patient_manager.get_patient(patient_index)
+        cls_patient = self.Cls_manager.get_patient(self.patient_ids[patient_index])
         if patient is None:
             return
         
         box = patient.get_bbox(self.bbox_index)
         if box is not None:
-            self.bbox_info_display.rest_box(box)
+            bbox_type = box.get_bbox_type()
+            if bbox_type == 0:
+                if cls_patient is None:
+                    return
+                self.bbox_info_display.rest_box(box, cls_patient.get_nodule_count())
+            elif bbox_type == 1:
+                self.bbox_info_display.rest_box(box, patient.get_box_count())
             
     
     def bbox_index_changed(self, box_index):

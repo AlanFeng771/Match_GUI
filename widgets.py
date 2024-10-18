@@ -165,7 +165,7 @@ class PlayerView(QtWidgets.QWidget):
         
         y_index, x_index = np.where(contour_image == 255)
         for y, x in zip(y_index, x_index):
-            painter.setPen(QtGui.QColor(255, 0, 0, contour_image[y, x]))  # Red color for edges
+            painter.setPen(QtGui.QColor(255, 0, 0, int((contour_image[y, x]))))  # Red color for edges
             painter.drawPoint(x, y)
         painter.end()
         contour_item = QtWidgets.QGraphicsPixmapItem(contour_pixmap)
@@ -916,13 +916,13 @@ class BboxInfoWidget(QtWidgets.QWidget):
         self.box.add_items(item_count, type=type)
         self.box.set_item_index(index)
     
-    def rest_box(self, box:Manager.Bbox):
+    def rest_box(self, box:Manager.Bbox, count:int):
         if box is not None:
             type_index = box.get_bbox_type()
             if type_index == 0:
-                self.add_box_items(10, 'nodule', box.get_nodule_index())
+                self.add_box_items(count, 'nodule', box.get_nodule_index())
             elif type_index == 1:
-                self.add_box_items(10, 'bbox', box.get_box_group())
+                self.add_box_items(count, 'bbox', box.get_box_group())
                 
             self.bbox_type_buttons.set_button_index(type_index)
 

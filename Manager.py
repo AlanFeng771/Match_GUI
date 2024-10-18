@@ -314,6 +314,8 @@ class PatientClsElement:
         self.mask_path = mask_path
         
     def get_contour_images(self):
+        if self.mask_path is None:
+            return None
         mask = np.load(self.mask_path)['image']
         
         return mask

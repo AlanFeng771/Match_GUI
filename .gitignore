@@ -2,3 +2,4 @@ bbox/
 npy/
 npz/
 *.npy
+npy/*.npy

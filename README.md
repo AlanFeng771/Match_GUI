@@ -54,7 +54,7 @@
 #### 前置作業
 請確保你具有以下的檔案:
 1. lung_M_class_0001-1800.csv -> 醫生根據mask標記的資訊
-2. Raw_npy/  -> 原始的dicom image 轉換成npy檔(沒有經過resample)
+2. Raw_npy/  -> 原始的dicom image 轉換成npy檔(沒有經過resample) (請從NAS自行下載 (BME\BME_dataset\Raw_npy))
     |--0001.npy
     |--0002.npy
     |--...
@@ -69,7 +69,7 @@
 - 請修改start.bat 正確的參數 (參考**前置作業**)
 > output_file_name 可自行決定，這會決定輸出檔案的名稱 (ex: output_file_name.csv) 
 - 執行start.bat
-
+> 如果想要繼續標記請修改 start.bat 中的--bbox_annotation_file 參數，換成上一次輸出的檔案(ex: output_file_name.csv)
 #### GUI介紹
 ![alt text](image-18.png)
 - gui 分成兩個部分
@@ -93,7 +93,7 @@
         1. next -> 下一個patient
         2. previous -> 上一個patient
         ![alt text](image-21.png)
-        3. output -> 輸出目前的結果
+        3. output -> 輸出目前的結果，記得結束標記一定要按下這個按鈕，不然會丟失標記的結果
         
 #### 使用方式
 我將bbox根據上面定義的問題應該要對應的操作分成四個部分:

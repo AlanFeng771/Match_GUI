@@ -245,6 +245,10 @@ class PatientManager:
                 patient.set_bbox(bbox_list)
         
     def output_match_table(self, output_path:str, patient_ids:list): 
+        output_root = os.path.dirname(output_path)
+        print(output_root)
+        if not os.path.exists(output_root):
+            os.makedirs(output_root)
         with open(output_path, 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(['patient_id','center_x','center_y','center_z','width','height','depth','type','index','is_checked'])

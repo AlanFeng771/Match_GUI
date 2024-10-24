@@ -3,3 +3,4 @@ npy/
 mask_npz/
 *.npy
 npy/*.npy
+log.md

@@ -1,3 +1,4 @@
+from math import e
 import re
 import numpy as np
 import json
@@ -90,7 +91,11 @@ class Patient:
         # return np.load(self.image_path)['image']
         if self.image_path is None:
             return None
-        return tools.normalize_raw_image(np.load(self.image_path))
+        try:
+            return tools.normalize_raw_image(np.load(self.image_path))
+        except Exception as e:
+            print(e)
+            return None
     
     def get_bboxes(self):
         return self.bboxes

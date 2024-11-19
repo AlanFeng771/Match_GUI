@@ -923,6 +923,9 @@ class BboxInfoWidget(QtWidgets.QWidget):
                 self.add_box_items(count, 'nodule', box.get_nodule_index())
             elif type_index == 1:
                 self.add_box_items(count, 'bbox', box.get_box_group())
+            else:
+                self.box.clear()
+                self.box.set_item_index(-1)
                 
             self.bbox_type_buttons.set_button_index(type_index)
 

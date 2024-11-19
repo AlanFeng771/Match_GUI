@@ -92,7 +92,9 @@ class Patient:
         if self.image_path is None:
             return None
         try:
-            return tools.normalize_raw_image(np.load(self.image_path))
+            image = tools.normalize_raw_image(np.load(self.image_path))
+            print(self.image_path, 'done')
+            return image            
         except Exception as e:
             print(e)
             return None

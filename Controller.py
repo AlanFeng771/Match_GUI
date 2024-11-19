@@ -149,13 +149,17 @@ class Controller(QtWidgets.QWidget):
                 self.bbox_info_display.rest_box(box, cls_patient.get_nodule_count())
             elif bbox_type == 1:
                 self.bbox_info_display.rest_box(box, patient.get_box_count())
-            
+            elif bbox_type == 2:
+                self.bbox_info_display.rest_box(box, 0)
+            elif bbox_type == 3:
+                self.bbox_info_display.rest_box(box, 0)
+                
     
     def bbox_index_changed(self, box_index):
         self.jump_to_nodule_bbox_start_slice(box_index)
     
     def load_images_from_direction(self, direction_path):
-        image_paths = [f'{direction_path}/{patient_id}.npy' for patient_id in self.patient_ids]
+        image_paths = [f'{direction_path}/{patient_id}.npy' for patient_id in self.patient_ids if patient_id in self.patient_ids]
         self.patient_manager.add_images_from_direction(self.patient_ids, image_paths)
         patient_index = self.patient_manager.get_current_index()
         if patient_index is None:
@@ -237,7 +241,10 @@ class Controller(QtWidgets.QWidget):
         self.reset_info()
         self.bbox_button_list.clear_buttons()
         self.bbox_button_list.add_bboxes(patient)
-        
+        try:
+            print(patient.bboxes[0].get_start_slice())
+        except:
+            print('no bbox')
         self.player.load_image(patient, cls_patient)
         
         is_valid = self.Cls_button_list.set_cls_button_index(self.cls_index)

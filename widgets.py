@@ -1,4 +1,7 @@
+from ast import List
 from operator import is_
+from optparse import Option
+from typing import Optional, Union
 from PyQt5 import QtCore, QtGui, QtWidgets 
 import numpy as np
 import cv2
@@ -107,7 +110,6 @@ class PlayerView(QtWidgets.QWidget):
         self.images = None
         self.num_of_images = 0
         self.contour_images = None
-        self.setFixedSize(QtCore.QSize(512, 512))
         self.initWidget()
         
     def initWidget(self):
@@ -115,9 +117,11 @@ class PlayerView(QtWidgets.QWidget):
         label_font.setFamily('Verdana')
         label_font.setPointSize(12)
         label_font.setBold(True)  
+        
         # PhotoViewer
         self.viewer = PhotoViewer(self)
-
+        self.viewer.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        
         # Scroll bar
         self.scrollBar = QtWidgets.QScrollBar(QtCore.Qt.Orientation.Horizontal)
         self.scrollBar.setMinimum(0)
@@ -127,10 +131,13 @@ class PlayerView(QtWidgets.QWidget):
         # Text
         self.sliceText = QtWidgets.QLineEdit('0')
         self.sliceText.setFont(label_font)
-        self.sliceText.setFixedSize(QtCore.QSize(50, 30))
+        self.sliceText.setFixedSize(QtCore.QSize(50, 30))  # 可視需求移除這行
+        self.sliceText.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        
         self.maxSliceText = QtWidgets.QLabel('/')
         self.maxSliceText.setFont(label_font)
-        self.maxSliceText.setFixedSize(QtCore.QSize(50, 30))
+        self.maxSliceText.setFixedSize(QtCore.QSize(50, 30))  # 可視需求移除這行
+        self.maxSliceText.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         
         # layout
         VBlayout = QtWidgets.QVBoxLayout(self)
@@ -138,9 +145,14 @@ class PlayerView(QtWidgets.QWidget):
         HBlayout.addWidget(self.scrollBar, 10)
         HBlayout.addWidget(self.sliceText, 1)
         HBlayout.addWidget(self.maxSliceText, 1)
+        
         VBlayout.addWidget(self.viewer)
         VBlayout.addLayout(HBlayout)
-        self.viewer.installEventFilter(self)
+        
+        # 自動適應螢幕大小
+        self.setLayout(VBlayout)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+
     
     def _numpytoPixmap(self, image):
         image =  cv2.cvtColor(image.astype(np.uint8), cv2.COLOR_GRAY2RGB)
@@ -230,22 +242,195 @@ class PlayerView(QtWidgets.QWidget):
                 currrent_image_index = self.image_index
                 self.scrollBar.setValue(currrent_image_index+1) 
 
+
+class PlayerViewWithContour(QtWidgets.QWidget):
+    def __init__(self):
+        super(PlayerViewWithContour, self).__init__()
+        self.images = None
+        self.num_of_images = 0
+        self.contour_images = None
+        self.rects = []
+        self.initWidget()
+        
+    def initWidget(self):
+        label_font = QtGui.QFont()
+        label_font.setFamily('Verdana')
+        label_font.setPointSize(12)
+        label_font.setBold(True)  
+        
+        # PhotoViewer
+        self.viewer = PhotoViewer(self)
+        self.viewer.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        
+        # Scroll bar
+        self.scrollBar = QtWidgets.QScrollBar(QtCore.Qt.Orientation.Horizontal)
+        self.scrollBar.setMinimum(0)
+        self.scrollBar.setMaximum(0)  # 初始設置為0，因為還沒有圖片加載
+        self.scrollBar.valueChanged.connect(self.show)
+
+        # Text
+        self.sliceText = QtWidgets.QLineEdit('0')
+        self.sliceText.setFont(label_font)
+        self.sliceText.setFixedSize(QtCore.QSize(50, 30))  # 可視需求移除這行
+        self.sliceText.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        
+        self.maxSliceText = QtWidgets.QLabel('/')
+        self.maxSliceText.setFont(label_font)
+        self.maxSliceText.setFixedSize(QtCore.QSize(50, 30))  # 可視需求移除這行
+        self.maxSliceText.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        
+        # layout
+        VBlayout = QtWidgets.QVBoxLayout(self)
+        HBlayout = QtWidgets.QHBoxLayout()
+        HBlayout.addWidget(self.scrollBar, 10)
+        HBlayout.addWidget(self.sliceText, 1)
+        HBlayout.addWidget(self.maxSliceText, 1)
+        
+        VBlayout.addWidget(self.viewer)
+        VBlayout.addLayout(HBlayout)
+        
+        # 自動適應螢幕大小
+        self.setLayout(VBlayout)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+
+    
+    def _numpytoPixmap(self, image):
+        image =  cv2.cvtColor(image.astype(np.uint8), cv2.COLOR_GRAY2RGB)
+        h,w,ch = image.shape
+        image = QtGui.QImage(image, w, h, w*ch, QtGui.QImage.Format_RGB888)
+        pix = QtGui.QPixmap(image)
+        return pix
+    
+    def _generate_contour_item(self, contour_image):
+        height, width = contour_image.shape
+        contour_image = np.array(contour_image, dtype=np.uint8)
+
+            
+        contour_pixmap = QtGui.QPixmap(width, height)
+        transparent_color = QtGui.QColor(0, 0, 0, 0)
+        contour_pixmap.fill(transparent_color)
+        painter = QtGui.QPainter(contour_pixmap)
+        
+        if np.max(contour_image) == 0:
+            painter.end()
+            return QtWidgets.QGraphicsPixmapItem(contour_pixmap)
+        
+        y_index, x_index = np.where(contour_image == 255)
+        for y, x in zip(y_index, x_index):
+            painter.setPen(QtGui.QColor(255, 0, 0, int((contour_image[y, x]))))  # Red color for edges
+            painter.drawPoint(x, y)
+        painter.end()
+        contour_item = QtWidgets.QGraphicsPixmapItem(contour_pixmap)
+        
+        return contour_item
+        
+    def load_image(self, patient:Manager.Patient, patient_cls_element:Manager.PatientClsElement):
+        self.images = patient.get_images()
+        if self.images is None:
+            return
+        self.image_index = 0
+        self.num_of_images = self.images.shape[2]
+        self.contour_images = patient_cls_element.get_contour_images()
+        self.scrollBar.setMaximum(self.images.shape[2]-1)
+        self.show_image()
+    
+    def load_bbox(self, patient_cls_element:Manager.PatientClsElement):
+        elements = patient_cls_element.get_elements()
+        for element in elements:
+            if element.get_bbox() is None:
+                continue
+            center_x, center_y, center_z, width, height, depth = element.get_bbox()
+            # print(center_x, center_y, center_z, width, height, depth)
+            rect = CustomRectItem(size=(width, height), position=QtCore.QPointF(center_x, center_y), slices=[int(center_z-depth/2), int(center_z+depth/2)])
+            self.rects.append(rect)
+            self.viewer.add_item(rect)
+    
+    def show_image(self, image_index=0):
+        # init
+        if self.contour_images is not None:
+            contour_item = self._generate_contour_item(self.contour_images[:,:,image_index])
+        else:
+            contour_item = None
+        if self.images is not None: 
+            self.viewer.setPhoto(self._numpytoPixmap(self.images[:,:,image_index]), contour_item)
+            # self.viewer.fit_in_view()
+        self.image_index = image_index
+    
+    def show_bbox(self, image_index=0):
+        if len(self.rects) > 0:
+            for rect in self.rects:
+                if rect.is_valid(image_index):
+                    rect.show()
+                else:
+                    rect.hide()
+    
+    def reset_bbox_color(self):
+        if len(self.rects) > 0:
+            for rect in self.rects:
+                rect.setBorderColor(QtCore.Qt.GlobalColor.red)
+    
+    def show(self, image_index:int=0):
+        self.sliceText.setText(str(image_index))
+        self.show_image(image_index)
+        self.show_bbox(image_index)
+        
+    def focus_bbox(self, index:int):
+        self.reset_bbox_color()
+        try:
+            rect = self.rects[index]
+            rect.setBorderColor(QtCore.Qt.GlobalColor.green)
+        except:
+            pass
+    
+    def set_current_scrollbar_index(self, value:int):
+        self.scrollBar.setValue(value)
+    
+    def reset_rects(self):
+        # init
+        for rect in self.rects:
+            self.viewer.remove_item(rect)
+
+        del self.rects
+        # init bbox annotation
+        self.rects = []
+    
+    def wheelEvent(self, event):
+        modifiers = event.modifiers()
+        if modifiers == QtCore.Qt.NoModifier:
+            if event.angleDelta().y() > 0:
+                action = 'next'
+            else:
+                action = 'previous'
+
+            self.scroll_image(action)
+            
+    def scroll_image(self, type):
+        if type == 'previous':
+            if self.image_index > 0:
+                currrent_image_index = self.image_index
+                self.scrollBar.setValue(currrent_image_index-1)
+        elif type == 'next':
+            if self.image_index < self.num_of_images-1:
+                currrent_image_index = self.image_index
+                self.scrollBar.setValue(currrent_image_index+1) 
+
 class PlayerWithRectView(QtWidgets.QWidget):
     def __init__(self):
         super(PlayerWithRectView, self).__init__()
         self.images = None
         self.num_of_images = 0
         self.rects = []
-        self.setFixedSize(QtCore.QSize(512, 512))
         self.initWidget()
 
     def initWidget(self):
         label_font = QtGui.QFont()
         label_font.setFamily('Verdana')
         label_font.setPointSize(12)
-        label_font.setBold(True)  
+        label_font.setBold(True)
+        
         # PhotoViewer
         self.viewer = PhotoViewer(self)
+        self.viewer.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
 
         # Scroll bar
         self.scrollBar = QtWidgets.QScrollBar(QtCore.Qt.Orientation.Horizontal)
@@ -256,10 +441,13 @@ class PlayerWithRectView(QtWidgets.QWidget):
         # Text
         self.sliceText = QtWidgets.QLineEdit('0')
         self.sliceText.setFont(label_font)
-        self.sliceText.setFixedSize(QtCore.QSize(50, 30))
+        self.sliceText.setFixedSize(QtCore.QSize(50, 30))  # 可視需求移除
+        self.sliceText.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        
         self.maxSliceText = QtWidgets.QLabel('/')
         self.maxSliceText.setFont(label_font)
-        self.maxSliceText.setFixedSize(QtCore.QSize(50, 30))
+        self.maxSliceText.setFixedSize(QtCore.QSize(50, 30))  # 可視需求移除
+        self.maxSliceText.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         
         # layout
         VBlayout = QtWidgets.QVBoxLayout(self)
@@ -267,9 +455,15 @@ class PlayerWithRectView(QtWidgets.QWidget):
         HBlayout.addWidget(self.scrollBar, 10)
         HBlayout.addWidget(self.sliceText, 1)
         HBlayout.addWidget(self.maxSliceText, 1)
+        
         VBlayout.addWidget(self.viewer)
         VBlayout.addLayout(HBlayout)
-        self.viewer.installEventFilter(self)
+
+        # 自動適應螢幕大小
+        self.setLayout(VBlayout)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+
+        
     
     def _numpytoPixmap(self, image):
         image =  cv2.cvtColor(image.astype(np.uint8), cv2.COLOR_GRAY2RGB)
@@ -843,12 +1037,17 @@ class Box(QtWidgets.QComboBox):
             self.addItem(f'{nodule_index}')
         self.update()
 
-    def add_items(self, nodule_count: int, type: str = 'nodule'):
+    def add_items(self, indexes: Union[str, List], type: str = 'nodule'):
         self._updating = True  # 標記為更新狀態
         self.clear()
 
-        for nodule_index in range(nodule_count):
-            self.add_item(nodule_index, type=type)
+        if isinstance(indexes, int):
+            for nodule_index in range(indexes):
+                self.add_item(nodule_index, type=type)
+                
+        if isinstance(indexes, list):
+            for nodule_index in indexes:
+                self.add_item(int(nodule_index), type=type)
 
         self._updating = False  # 結束更新狀態
 
@@ -912,17 +1111,21 @@ class BboxInfoWidget(QtWidgets.QWidget):
         if index != -1:
             self.bbox_index_changed.emit(index, self.bbox_type_buttons.button_index)
     
-    def add_box_items(self, item_count:int, type:str='nodule', index:int=0):
-        self.box.add_items(item_count, type=type)
+    # def add_box_items(self, item_count:int, type:str='nodule', index:int=0):
+    #     self.box.add_items(item_count, type=type)
+    #     self.box.set_item_index(index)
+    
+    def add_box_items(self, indexes, type:str='nodule', index:int=0):
+        self.box.add_items(indexes, type=type)
         self.box.set_item_index(index)
     
-    def rest_box(self, box:Manager.Bbox, count:int):
+    def rest_box(self, box:Manager.Bbox, indexes:Union[str, List]):
         if box is not None:
             type_index = box.get_bbox_type()
             if type_index == 0:
-                self.add_box_items(count, 'nodule', box.get_nodule_index())
+                self.add_box_items(indexes, 'nodule', box.get_nodule_index())
             elif type_index == 1:
-                self.add_box_items(count, 'bbox', box.get_box_group())
+                self.add_box_items(indexes, 'bbox', box.get_box_group())
             else:
                 self.box.clear()
                 self.box.set_item_index(-1)

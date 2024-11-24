@@ -1,4 +1,6 @@
 from math import e
+from operator import le
+from typing import Optional
 import re
 import numpy as np
 import json
@@ -236,7 +238,7 @@ class PatientManager:
             reader = csv.DictReader(file)
             for row in reader:
                 patient_id = row['patient_id']
-                bbox_list = [float(row['center_x']), float(row['center_y']), float(row['center_z']), int(row['width']), int(row['height']), int(row['depth']), int(row['type']), int(row['index']), row['is_checked']=='True']
+                bbox_list = [float(row['center_x']), float(row['center_y']), float(row['center_z']), float(row['width']), float(row['height']), float(row['depth']), int(row['type']), int(row['index']), row['is_checked']=='True']
                 
                 if patient_id not in self.patient_ids:
                     continue
@@ -271,9 +273,11 @@ class PatientManager:
                             writer.writerow([patient_id, bbox_data.bbox[0], bbox_data.bbox[1], bbox_data.bbox[2], bbox_data.bbox[3], bbox_data.bbox[4], bbox_data.bbox[5], bbox_data.get_bbox_type(), -1, bbox_data.get_checked()])
         
 class ClsElement:
-    def __init__(self, start_slice:int, category:int):
+    def __init__(self, start_slice:int, nodule_index:int, category:int, bbox_annotation_path:Optional[str]=None):
         self.start_slice = start_slice
+        self.nodule_index = nodule_index
         self.category = category
+        self.bbox = None if bbox_annotation_path is None else self._get_bbox_annotation(bbox_annotation_path)
         self.is_checked = False
         
     def get_start_slice(self):
@@ -284,6 +288,50 @@ class ClsElement:
 
     def get_checked(self):
         return self.is_checked
+
+    def get_bbox(self):
+        return self.bbox
+    
+    def get_nodule_index(self):
+        return self.nodule_index
+    
+    def _get_bbox_annotation(self, bbox_annotation_path:str):
+        # 2d bbox -> 3d bbox
+        with open(bbox_annotation_path, 'r') as file:
+            top_left_x, top_left_y, bottom_right_x, bottom_right_y = 9999, 9999, 0, 0
+            start_slice = 9999
+            end_slice = 0
+            annotation = file.readlines()
+            for i, line in enumerate(annotation[1:]):
+                bbox = line.replace('\n', '').split(' ')
+                slice = int(bbox[0].split('.')[-1][-4:])
+                if slice < start_slice:
+                    start_slice = slice
+                
+                if slice > end_slice:
+                    end_slice = slice
+                
+                x1, y1, x2, y2 = int(bbox[1]), int(bbox[2]), int(bbox[3]), int(bbox[4]) # filename x1 y1 x2 y2
+                if x1 < top_left_x:
+                    top_left_x = x1
+                
+                if y1 < top_left_y:
+                    top_left_y = y1
+                
+                if x2 > bottom_right_x:
+                    bottom_right_x = x2
+                
+                if y2 > bottom_right_y:
+                    bottom_right_y = y2
+            center_x = (top_left_x + bottom_right_x) // 2
+            center_y = (top_left_y + bottom_right_y) // 2
+            center_z = (start_slice + end_slice) // 2
+            width = bottom_right_x - top_left_x
+            height = bottom_right_y - top_left_y
+            depth = end_slice - start_slice
+            self.start_slice = start_slice # replace the start slice using bbox annotation
+        return [center_x, center_y, center_z, width, height, depth]
+                
     
     def set_checked(self, is_checked:bool):
         self.is_checked = is_checked    
@@ -291,17 +339,22 @@ class ClsElement:
 class PatientClsElement:
     def __init__(self, patient_id:str):
         self.patient_id = patient_id
+        self.nodule_indexs = []
         self.cls_elements = []
         self.sorted_cls_elements = []
         self.sorted_index = []
         self.mask_path = None
     
-    def add_element(self, start_slice:int, category:int):
-        self.cls_elements.append(ClsElement(start_slice, category))
+    def add_element(self, start_slice:int, nodule_index:int, category:int, bbox_annotation_path:Optional[str]=None):
+        self.cls_elements.append(ClsElement(start_slice, nodule_index, category, bbox_annotation_path))
+        self.nodule_indexs.append(nodule_index)
         start_slices = [cls_element.get_start_slice() for cls_element in self.cls_elements]
         self.sorted_cls_elements = sorted(self.cls_elements, key=lambda cls_element: cls_element.get_start_slice()) 
         self.sorted_index = sorted((start_slice, bbox_index) for bbox_index, start_slice in enumerate(start_slices))
         self.sorted_index = [sorted_index[1] for sorted_index in self.sorted_index]
+    
+    def get_nodule_indexs(self):
+        return self.nodule_indexs
     
     def get_bbox_index(self, indx)->int:
         return self.sorted_index[indx]
@@ -316,7 +369,7 @@ class PatientClsElement:
         return self.sorted_cls_elements[element_index]
 
     def get_nodule_index(self, indx):
-        return self.sorted_index[indx]
+        return self.nodule_indexs[self.sorted_index[indx]]
     
     def get_nodule_count(self):
         return len(self.cls_elements)
@@ -330,11 +383,14 @@ class PatientClsElement:
         mask = np.load(self.mask_path)['image']
         
         return mask
+    def get_cls_elements_count(self):
+        return len(self.cls_elements)
         
 class ClsManager:
     def __init__(self):
         self.patient_cls_elements = {}
         self.mask_root = None
+        self.bbox_root = None
     
     def get_patient(self, patient_id:str)->Union[PatientClsElement, None]:
         if patient_id in self.patient_cls_elements:
@@ -344,6 +400,9 @@ class ClsManager:
     
     def set_mask_root(self, mask_root:str):
         self.mask_root = mask_root
+    
+    def set_bbox_root(self, bbox_root:str):
+        self.bbox_root = bbox_root
         
     def load_csv_file(self, csv_file:str):
         with open(csv_file, 'r') as file:
@@ -363,6 +422,34 @@ class ClsManager:
                     self.patient_cls_elements[patient_id].set_mask_path(mask_path)
                     
                 self.patient_cls_elements[patient_id].add_element(start_slice, tw_lung_rads)
+                
+    def load_annotation(self, cls_csv_file:str):
+        with open(cls_csv_file, 'r') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                img_name = row['Img name']
+                tw_lung_rads = int(row['TW_Lung_RADS'])
+                nodule_index = int(row['nodule'])
+                _, patient_id, start_slice = img_name.split('-')
+                patient_id = patient_id[2:]
+                start_slice = int(start_slice[1:])
+                if patient_id not in self.patient_cls_elements:
+                    self.patient_cls_elements[patient_id] = PatientClsElement(patient_id)
+                
+                if self.mask_root is not None:
+                    mask_path = os.path.join(self.mask_root, patient_id + '.npz')
+                    self.patient_cls_elements[patient_id].set_mask_path(mask_path)
+                
+                if self.bbox_root is not None:
+                    bbox_file_name = 'Id{}-N{:02}.txt'.format(patient_id, nodule_index)
+                    bbox_path = os.path.join(self.bbox_root, bbox_file_name)
+                    if not os.path.exists(bbox_path):
+                        print(bbox_file_name, 'not exist')
+                        bbox_path = None
+                else:
+                    bbox_path = None
+                    
+                self.patient_cls_elements[patient_id].add_element(start_slice, nodule_index, tw_lung_rads, bbox_annotation_path=bbox_path)
     
     
     

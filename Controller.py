@@ -22,8 +22,11 @@ class Controller(QtWidgets.QWidget):
         self.patient_ids_file = args.patient_ids_file
         self.output_file_name = args.output_file_name
         self.mask_root = args.mask_root
+        self.gt_bbox = r'D:\Bme_Dataset\Db_Annotation_Txt_Bbox'
         self.Cls_manager.set_mask_root(self.mask_root)
-        self.Cls_manager.load_csv_file(self.annotation_file)
+        self.Cls_manager.set_bbox_root(self.gt_bbox)
+        # self.Cls_manager.load_csv_file(self.annotation_file)
+        self.Cls_manager.load_annotation(self.annotation_file)
     
         with open(self.patient_ids_file, 'r') as f:
             patient_ids = f.readlines()
@@ -36,7 +39,8 @@ class Controller(QtWidgets.QWidget):
         
     def initWidget(self):
         # widgets
-        self.player = widgets.PlayerView()
+        # self.player = widgets.PlayerView()
+        self.player = widgets.PlayerViewWithContour()
         self.player_with_bbox = widgets.PlayerWithRectView()
         self.load_image_button = widgets.LoadImageButton()
         self.load_bbox_button = widgets.LoadAnnotationButton()
@@ -146,7 +150,7 @@ class Controller(QtWidgets.QWidget):
             if bbox_type == 0:
                 if cls_patient is None:
                     return
-                self.bbox_info_display.rest_box(box, cls_patient.get_nodule_count())
+                self.bbox_info_display.rest_box(box, cls_patient.get_nodule_indexs())
             elif bbox_type == 1:
                 self.bbox_info_display.rest_box(box, patient.get_box_count())
             elif bbox_type == 2:
@@ -245,12 +249,16 @@ class Controller(QtWidgets.QWidget):
             print(patient.bboxes[0].get_start_slice())
         except:
             print('no bbox')
+        
+        self.player.reset_rects()
         self.player.load_image(patient, cls_patient)
+        self.player.load_bbox(cls_patient)
         
         is_valid = self.Cls_button_list.set_cls_button_index(self.cls_index)
         if is_valid:
             self.player.set_current_scrollbar_index(cls_patient.get_element(self.cls_index).get_start_slice())
             self.display_label1.set_text(cls_index)
+            self.player.focus_bbox(cls_index)
         
         self.player_with_bbox.reset_rects()
         self.player_with_bbox.load_image(patient)
@@ -274,6 +282,7 @@ class Controller(QtWidgets.QWidget):
             return
         image_index = cls_patient.get_element(nodule_index).get_start_slice()
         self.player.set_current_scrollbar_index(image_index)
+        self.player.focus_bbox(nodule_index)
         self.display_label1.set_text(cls_patient.get_bbox_index(nodule_index))
     
     def jump_to_nodule_bbox_start_slice(self, nodule_index:int):
@@ -425,7 +434,7 @@ class Controller(QtWidgets.QWidget):
         if type == 0:
             if cls_patient is None:
                 return
-            self.bbox_info_display.add_box_items(cls_patient.get_nodule_count(), type='nodule', index=box.get_nodule_index())
+            self.bbox_info_display.add_box_items(cls_patient.get_nodule_indexs(), type='nodule', index=box.get_nodule_index())
         elif type == 1:
             if patient is None:
                 return
